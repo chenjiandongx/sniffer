@@ -25,7 +25,6 @@ type UIComponent struct {
 	grid        *termui.Grid
 	shiftIdx    int
 	mode        RenderMode
-	lookup      func(string) string
 }
 
 type RenderMode uint8
@@ -35,7 +34,7 @@ const (
 	RModePackets
 )
 
-func NewUIComponent(lookup func(string) string, mode RenderMode) *UIComponent {
+func NewUIComponent(mode RenderMode) *UIComponent {
 	ui := &UIComponent{
 		header:      newHeader(mode),
 		footer:      newFooter(),
@@ -43,7 +42,6 @@ func NewUIComponent(lookup func(string) string, mode RenderMode) *UIComponent {
 		remoteAddrs: newTable("Process Name"),
 		connections: newTable("Connections"),
 		mode:        mode,
-		lookup:      lookup,
 	}
 
 	ui.tableRef = []*widgets.Table{ui.processes, ui.remoteAddrs, ui.connections}
@@ -181,12 +179,7 @@ func (ui *UIComponent) updateRemoteAddrs(snapshot *Snapshot) {
 			down = ui.humanizeNumber(r.Data.DownloadPackets)
 		}
 
-		// only resolve the TCP IPs
-		addr := r.Addr
-		if r.Data.Protocol == ProtoTCP {
-			addr = ui.lookup(r.Addr)
-		}
-		rows = append(rows, []string{addr, strconv.Itoa(r.Data.ConnCount), up + " / " + down})
+		rows = append(rows, []string{r.Addr, strconv.Itoa(r.Data.ConnCount), up + " / " + down})
 	}
 
 	header := []string{"Remote Address", "Connections", "Up / Down"}
@@ -207,16 +200,10 @@ func (ui *UIComponent) updateConnections(snapshot *Snapshot) {
 			down = ui.humanizeNumber(r.Data.DownloadPackets)
 		}
 
-		// only resolve the TCP IPs
-		remoteIP := r.Conn.Remote.IP
-		if r.Conn.Local.Protocol == ProtoTCP {
-			remoteIP = ui.lookup(r.Conn.Remote.IP)
-		}
-
 		conn := fmt.Sprintf("<%s>:%d => %s:%d (%s)",
 			r.Data.InterfaceName,
 			r.Conn.Local.Port,
-			remoteIP,
+			r.Conn.Remote.IP,
 			r.Conn.Remote.Port,
 			r.Conn.Local.Protocol,
 		)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,8 +34,6 @@ type SocketFetcher interface {
 	GetOpenSockets() (OpenSockets, error)
 	GetProcSockets(pid int32) (OpenSockets, error)
 }
-
-var defaultDevicePrefix = []string{"en", "lo", "eth", "em", "bond"}
 
 type Protocol string
 
@@ -73,25 +70,29 @@ type pcapHandler struct {
 }
 
 type PcapClient struct {
-	bindIPs     map[string]bool
-	handlers    []pcapHandler
-	bpfFilter   string
-	ch          chan []Segment
-	wg          sync.WaitGroup
-	utilization Utilization
-	utilmut     sync.Mutex
+	bindIPs       map[string]bool
+	handlers      []pcapHandler
+	bpfFilter     string
+	devicesPrefix []string
+	ch            chan []Segment
+	wg            sync.WaitGroup
+	lookup        Lookup
+	utilization   Utilization
+	utilmut       sync.Mutex
 }
 
-func NewPcapClient(bpfFilter string, devices ...string) (*PcapClient, error) {
+func NewPcapClient(lookup Lookup, bpfFilter string, devicesPrefix []string) (*PcapClient, error) {
 	client := &PcapClient{
-		bindIPs:     make(map[string]bool),
-		handlers:    make([]pcapHandler, 0),
-		ch:          make(chan []Segment, 8),
-		utilization: make(Utilization),
-		bpfFilter:   bpfFilter,
+		bindIPs:       make(map[string]bool),
+		handlers:      make([]pcapHandler, 0),
+		ch:            make(chan []Segment, 8),
+		lookup:        lookup,
+		utilization:   make(Utilization),
+		bpfFilter:     bpfFilter,
+		devicesPrefix: devicesPrefix,
 	}
 
-	if err := client.getAvailableDevices(devices); err != nil {
+	if err := client.getAvailableDevices(); err != nil {
 		return nil, err
 	}
 
@@ -103,40 +104,15 @@ func NewPcapClient(bpfFilter string, devices ...string) (*PcapClient, error) {
 	return client, nil
 }
 
-func (c *PcapClient) getAvailableDevices(devices []string) error {
+func (c *PcapClient) getAvailableDevices() error {
 	all, err := pcap.FindAllDevs()
 	if err != nil {
 		return err
 	}
 
-	wanted := make([]pcap.Interface, 0)
-	if len(devices) > 0 {
-		filter := make(map[string]struct{})
-		for _, device := range devices {
-			filter[device] = struct{}{}
-		}
-		for _, device := range all {
-			_, ok := filter[device.Name]
-			if !ok {
-				continue
-			}
-			wanted = append(wanted, device)
-		}
-		all = wanted
-	}
-
-	if len(all) == 0 {
-		return errors.New("no available devices")
-	}
-
 	for _, device := range all {
-		// todo: should remove 'any' device here?
-		if device.Name == "any" {
-			continue
-		}
-
 		var found bool
-		for _, prefix := range defaultDevicePrefix {
+		for _, prefix := range c.devicesPrefix {
 			if strings.HasPrefix(device.Name, prefix) {
 				found = true
 			}
@@ -238,16 +214,25 @@ func (c *PcapClient) parsePacket(device string, packet gopacket.Packet) *Segment
 		Direction: direction,
 	}
 
+	var remoteIP string
 	switch seg.Direction {
 	case DirectionUpload:
+		remoteIP = dstIP
+		if protocol == ProtoTCP {
+			remoteIP = c.lookup(dstIP)
+		}
 		seg.Connection = Connection{
 			Local:  LocalSocket{IP: srcIP, Port: srcPort, Protocol: protocol},
-			Remote: RemoteSocket{IP: dstIP, Port: dstPort},
+			Remote: RemoteSocket{IP: remoteIP, Port: dstPort},
 		}
 	case DirectionDownload:
+		remoteIP = srcIP
+		if protocol == ProtoTCP {
+			remoteIP = c.lookup(srcIP)
+		}
 		seg.Connection = Connection{
 			Local:  LocalSocket{IP: dstIP, Port: dstPort, Protocol: protocol},
-			Remote: RemoteSocket{IP: srcIP, Port: srcPort},
+			Remote: RemoteSocket{IP: remoteIP, Port: srcPort},
 		}
 	}
 

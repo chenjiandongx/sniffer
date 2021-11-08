@@ -59,7 +59,7 @@ func (lc *lsofConn) GetOpenSockets() (OpenSockets, error) {
 		if len(fields) < 9 {
 			continue
 		}
-		procName := strings.ReplaceAll(fields[0],"\\x20", " ")
+		procName := strings.ReplaceAll(fields[0], "\\x20", " ")
 
 		switch fields[7] {
 		case "TCP":

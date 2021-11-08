@@ -9,6 +9,8 @@ import (
 	"github.com/rs/dnscache"
 )
 
+type Lookup func(string) string
+
 type DNSResolver struct {
 	done     chan struct{}
 	resolver *dnscache.Resolver

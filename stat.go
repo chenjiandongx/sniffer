@@ -31,7 +31,6 @@ type NetworkData struct {
 	UploadPackets   int
 	DownloadPackets int
 	ConnCount       int
-	Protocol        Protocol
 }
 
 func (d *NetworkData) DivideBy(n int) {
@@ -210,7 +209,7 @@ func (s *StatsManager) GetSnapshot() *Snapshot {
 			connections[conn].DownloadPackets += info.DownloadPackets
 
 			if _, ok := remoteAddr[conn.Remote.IP]; !ok {
-				remoteAddr[conn.Remote.IP] = &NetworkData{Protocol: conn.Local.Protocol}
+				remoteAddr[conn.Remote.IP] = &NetworkData{}
 			}
 			if !visited[conn] {
 				remoteAddr[conn.Remote.IP].ConnCount++

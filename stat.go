@@ -142,13 +142,15 @@ func (s *Snapshot) TopNConnections(n int, mode RenderMode) []ConnectionsResult {
 }
 
 type StatsManager struct {
-	mut  sync.Mutex
-	ring *deque.Deque
+	mut   sync.Mutex
+	ring  *deque.Deque
+	ratio int
 }
 
-func NewStatsManager() *StatsManager {
+func NewStatsManager(ratio int) *StatsManager {
 	return &StatsManager{
-		ring: deque.New(),
+		ring:  deque.New(),
+		ratio: ratio,
 	}
 }
 
@@ -238,6 +240,7 @@ func (s *StatsManager) GetSnapshot() *Snapshot {
 		}
 	}
 
+	size = size * s.ratio
 	for _, v := range processes {
 		v.DivideBy(size)
 	}

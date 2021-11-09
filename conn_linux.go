@@ -216,14 +216,13 @@ func (nl *netlinkConn) sockdiagSend(proto, family uint8, states uint32) (skfd in
 }
 
 func (nl *netlinkConn) sockdiagRecv(skfd, proto int, inodeMap map[uint32]string) (map[LocalSocket]string, error) {
-	ret := make(map[LocalSocket]string)
-
+	sockets := make(map[LocalSocket]string)
 	buffer := make([]byte, os.Getpagesize())
 loop:
 	for {
 		n, _, _, _, err := unix.Recvmsg(skfd, buffer, nil, 0)
 		if err != nil {
-			return ret, err
+			return sockets, err
 		}
 
 		if n == 0 {
@@ -232,7 +231,7 @@ loop:
 
 		msgs, err := syscall.ParseNetlinkMessage(buffer[:n])
 		if err != nil {
-			return ret, err
+			return sockets, err
 		}
 
 		for _, msg := range msgs {
@@ -250,15 +249,15 @@ loop:
 			case syscall.IPPROTO_UDP:
 				p = ProtoUDP
 			}
-			ret[LocalSocket{IP: srcIP, Port: uint16(m.ID.IdiagSport.Int()), Protocol: p}] = inodeMap[m.IDiagInode]
+			sockets[LocalSocket{IP: srcIP, Port: uint16(m.ID.IdiagSport.Int()), Protocol: p}] = inodeMap[m.IDiagInode]
 		}
 	}
 
-	return ret, nil
+	return sockets, nil
 }
 
 func (nl *netlinkConn) getOpenSockets(inodeMap map[uint32]string) (map[LocalSocket]string, error) {
-	ret := make(map[LocalSocket]string)
+	sockets := make(map[LocalSocket]string)
 
 	type Req struct {
 		Protocol int
@@ -290,19 +289,19 @@ func (nl *netlinkConn) getOpenSockets(inodeMap map[uint32]string) (map[LocalSock
 	for _, fd := range fds {
 		m, err := nl.sockdiagRecv(fd.fd, fd.proto, inodeMap)
 		if err != nil {
-			return ret, err
+			return sockets, err
 		}
 
 		for k, v := range m {
-			ret[k] = v
+			sockets[k] = v
 		}
 	}
 
-	return ret, nil
+	return sockets, nil
 }
 
 func (nl *netlinkConn) getAllProcsInodes(pids []int32) map[uint32]string {
-	ret := make(map[uint32]string)
+	inode2Procs := make(map[uint32]string)
 	for _, pid := range pids {
 		procName, inodes, err := nl.getProcInodes(pid)
 		if err != nil {
@@ -310,10 +309,10 @@ func (nl *netlinkConn) getAllProcsInodes(pids []int32) map[uint32]string {
 		}
 
 		for _, inode := range inodes {
-			ret[inode] = procName
+			inode2Procs[inode] = procName
 		}
 	}
-	return ret
+	return inode2Procs
 }
 
 func (nl *netlinkConn) getProcInodes(pid int32) (string, []uint32, error) {
@@ -354,16 +353,16 @@ func (nl *netlinkConn) getProcInodes(pid int32) (string, []uint32, error) {
 }
 
 func (nl *netlinkConn) listPids() ([]int32, error) {
-	var ret []int32
+	var pids []int32
 	d, err := os.Open("/proc")
 	if err != nil {
-		return ret, err
+		return pids, err
 	}
 	defer d.Close()
 
 	fnames, err := d.Readdirnames(-1)
 	if err != nil {
-		return ret, err
+		return pids, err
 	}
 
 	for _, fname := range fnames {
@@ -371,10 +370,10 @@ func (nl *netlinkConn) listPids() ([]int32, error) {
 		if err != nil {
 			continue
 		}
-		ret = append(ret, int32(pid))
+		pids = append(pids, int32(pid))
 	}
 
-	return ret, nil
+	return pids, nil
 }
 
 func (nl *netlinkConn) GetOpenSockets() (OpenSockets, error) {

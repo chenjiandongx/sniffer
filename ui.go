@@ -6,13 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dustin/go-humanize"
-	"github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
 
 const (
-	maxRows = 64
+	maxRows    = 64
+	timeFormat = "15:04:05"
 )
 
 type UIComponent struct {
@@ -32,6 +31,7 @@ type RenderMode uint8
 const (
 	RModeBytes RenderMode = iota
 	RModePackets
+	RModePlot
 )
 
 func NewUIComponent(mode RenderMode) *UIComponent {
@@ -39,7 +39,7 @@ func NewUIComponent(mode RenderMode) *UIComponent {
 		header:      newHeader(mode),
 		footer:      newFooter(),
 		processes:   newTable("Process Name"),
-		remoteAddrs: newTable("Process Name"),
+		remoteAddrs: newTable("Remote Address"),
 		connections: newTable("Connections"),
 		mode:        mode,
 	}
@@ -85,7 +85,7 @@ func newHeader(mode RenderMode) *widgets.Paragraph {
 		msg = "Packets/s"
 	}
 
-	text := fmt.Sprintf("Now: %s  Total Up / Down <%s>: 0ps / 0ps", time.Now().Format("15:04:05"), msg)
+	text := fmt.Sprintf("Now: %s  Total Up / Down <%s>: 0ps / 0ps", time.Now().Format(timeFormat), msg)
 	return newParagraph(text)
 }
 
@@ -100,7 +100,6 @@ func newParagraph(text string) *widgets.Paragraph {
 	paragraph.Border = false
 	paragraph.TextStyle = termui.NewStyle(termui.ColorClear)
 	paragraph.TextStyle.Modifier = termui.ModifierBold
-
 	return paragraph
 }
 
@@ -119,11 +118,11 @@ func (ui *UIComponent) humanizeNumber(n int) string {
 	var s string
 	switch ui.mode {
 	case RModeBytes:
-		s = strings.ReplaceAll(humanize.IBytes(uint64(n)), " ", "") + "ps"
+		s = strings.ReplaceAll(humanize.IBytes(uint64(n)), " ", "")
 	case RModePackets:
-		s = humanize.Comma(int64(n)) + "ps"
+		s = humanize.Comma(int64(n))
 	}
-	return s
+	return s + "ps"
 }
 
 func (ui *UIComponent) emptyRow(column int) []string {
@@ -131,7 +130,6 @@ func (ui *UIComponent) emptyRow(column int) []string {
 }
 
 func (ui *UIComponent) updateHeader(snapshot *Snapshot) {
-	now := time.Now().Format("15:04:05")
 	var up, down, msg string
 	switch ui.mode {
 	case RModeBytes:
@@ -143,7 +141,7 @@ func (ui *UIComponent) updateHeader(snapshot *Snapshot) {
 		down = ui.humanizeNumber(snapshot.TotalDownloadPackets)
 		msg = "Packets/s"
 	}
-	ui.header.Text = fmt.Sprintf("Now: %s  Total Up / Down <%s>: %s / %s", now, msg, up, down)
+	ui.header.Text = fmt.Sprintf("Now: %s  Total Up / Down <%s>: %s / %s", time.Now().Format(timeFormat), msg, up, down)
 }
 
 func (ui *UIComponent) updateProcesses(snapshot *Snapshot) {
@@ -178,7 +176,6 @@ func (ui *UIComponent) updateRemoteAddrs(snapshot *Snapshot) {
 			up = ui.humanizeNumber(r.Data.UploadPackets)
 			down = ui.humanizeNumber(r.Data.DownloadPackets)
 		}
-
 		rows = append(rows, []string{r.Addr, strconv.Itoa(r.Data.ConnCount), up + " / " + down})
 	}
 
@@ -207,7 +204,6 @@ func (ui *UIComponent) updateConnections(snapshot *Snapshot) {
 			r.Conn.Remote.Port,
 			r.Conn.Local.Protocol,
 		)
-
 		rows = append(rows, []string{conn, r.Data.ProcessName, up + " / " + down})
 	}
 
@@ -229,9 +225,11 @@ func (ui *UIComponent) Resize(width, height int) {
 }
 
 func (ui *UIComponent) Render(snapshot *Snapshot) {
-	ui.updateHeader(snapshot)
-	ui.updateProcesses(snapshot)
-	ui.updateRemoteAddrs(snapshot)
-	ui.updateConnections(snapshot)
+	if snapshot != nil {
+		ui.updateHeader(snapshot)
+		ui.updateProcesses(snapshot)
+		ui.updateRemoteAddrs(snapshot)
+		ui.updateConnections(snapshot)
+	}
 	termui.Render(ui.grid)
 }

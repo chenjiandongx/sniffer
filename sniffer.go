@@ -8,12 +8,14 @@ import (
 
 type options struct {
 	BPFFilter     string
+	Interval      int
 	RenderMode    RenderMode
 	DevicesPrefix []string
 }
 
 var defaultOptions = options{
 	BPFFilter:     "tcp or udp",
+	Interval:      1,
 	RenderMode:    RModeBytes,
 	DevicesPrefix: []string{"en", "lo", "eth", "em", "bond"},
 }
@@ -23,6 +25,12 @@ type OptionsFn func(opt *options)
 func WithBPFFilter(filter string) OptionsFn {
 	return func(opt *options) {
 		opt.BPFFilter = filter
+	}
+}
+
+func WithInterval(interval int) OptionsFn {
+	return func(opt *options) {
+		opt.Interval = interval
 	}
 }
 
@@ -39,7 +47,7 @@ func WithDevicesPrefix(devicesPrefix []string) OptionsFn {
 }
 
 type Sniffer struct {
-	options       *options
+	opts          *options
 	dnsResolver   *DNSResolver
 	pcapClient    *PcapClient
 	statsManager  *StatsManager
@@ -59,16 +67,45 @@ func NewSniffer(fn ...OptionsFn) (*Sniffer, error) {
 	}
 
 	return &Sniffer{
-		options:       &opts,
+		opts:          &opts,
 		dnsResolver:   dnsResolver,
 		pcapClient:    pcapClient,
-		statsManager:  NewStatsManager(),
+		statsManager:  NewStatsManager(opts.Interval),
 		ui:            NewUIComponent(opts.RenderMode),
 		socketFetcher: GetSocketFetcher(),
 	}, nil
 }
 
-func (s *Sniffer) Stop() {
+func (s *Sniffer) Start() {
+	events := termui.PollEvents()
+	s.Refresh()
+	var paused bool
+
+	ticker := time.Tick(time.Duration(s.opts.Interval) * time.Second)
+	for {
+		select {
+		case e := <-events:
+			switch e.ID {
+			case "<Tab>":
+				s.ui.Shift()
+			case "<Space>":
+				paused = !paused
+			case "<Resize>":
+				payload := e.Payload.(termui.Resize)
+				s.ui.Resize(payload.Width, payload.Height)
+			case "q", "Q", "<C-c>":
+				return
+			}
+
+		case <-ticker:
+			if !paused {
+				s.Refresh()
+			}
+		}
+	}
+}
+
+func (s *Sniffer) Close() {
 	s.pcapClient.Close()
 	s.dnsResolver.Close()
 	termui.Close()
@@ -83,39 +120,4 @@ func (s *Sniffer) Refresh() {
 
 	s.statsManager.Put(Stat{OpenSockets: openSockets, Utilization: utilization})
 	s.ui.Render(s.statsManager.GetSnapshot())
-}
-
-func main() {
-	sniffer, err := NewSniffer()
-	if err != nil {
-		panic(err)
-	}
-	defer sniffer.Stop()
-
-	events := termui.PollEvents()
-	sniffer.Refresh()
-	var paused bool
-
-	ticker := time.Tick(time.Second)
-	for {
-		select {
-		case e := <-events:
-			switch e.ID {
-			case "<Tab>":
-				sniffer.ui.Shift()
-			case "<Space>":
-				paused = !paused
-			case "<Resize>":
-				payload := e.Payload.(termui.Resize)
-				sniffer.ui.Resize(payload.Width, payload.Height)
-			case "q", "Q", "<C-c>":
-				return
-			}
-
-		case <-ticker:
-			if !paused {
-				sniffer.Refresh()
-			}
-		}
-	}
 }

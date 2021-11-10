@@ -300,7 +300,7 @@ func (nl *netlinkConn) getOpenSockets(inodeMap map[uint32]string) (map[LocalSock
 	return sockets, nil
 }
 
-func (nl *netlinkConn) getAllProcsInodes(pids []int32) map[uint32]string {
+func (nl *netlinkConn) getAllProcsInodes(pids ...int32) map[uint32]string {
 	inode2Procs := make(map[uint32]string)
 	for _, pid := range pids {
 		procName, inodes, err := nl.getProcInodes(pid)
@@ -382,12 +382,13 @@ func (nl *netlinkConn) GetOpenSockets() (OpenSockets, error) {
 		return nil, err
 	}
 
-	inodeMap := nl.getAllProcsInodes(pids)
+	inodeMap := nl.getAllProcsInodes(pids...)
 	return nl.getOpenSockets(inodeMap)
 }
 
-func (nl *netlinkConn) GetProcSockets(pid int32) (OpenSockets, error) {
-	return nil, nil
+func (nl *netlinkConn) GetProcSockets(pids ...int32) (OpenSockets, error) {
+	inodeMap := nl.getAllProcsInodes(pids...)
+	return nl.getOpenSockets(inodeMap)
 }
 
 func GetSocketFetcher() SocketFetcher {

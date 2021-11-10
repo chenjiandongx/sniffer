@@ -70,7 +70,7 @@ func NewSniffer(fn ...OptionsFn) (*Sniffer, error) {
 		opts:          &opts,
 		dnsResolver:   dnsResolver,
 		pcapClient:    pcapClient,
-		statsManager:  NewStatsManager(opts.Interval),
+		statsManager:  NewStatsManager(opts.Interval, opts.RenderMode),
 		ui:            NewUIComponent(opts.RenderMode),
 		socketFetcher: GetSocketFetcher(),
 	}, nil

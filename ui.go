@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dustin/go-humanize"
+	"github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
 
@@ -15,15 +17,21 @@ const (
 )
 
 type UIComponent struct {
-	header      *widgets.Paragraph
-	footer      *widgets.Paragraph
+	header *widgets.Paragraph
+	footer *widgets.Paragraph
+
 	processes   *widgets.Table
 	remoteAddrs *widgets.Table
 	connections *widgets.Table
-	tableRef    []*widgets.Table
-	grid        *termui.Grid
-	shiftIdx    int
-	mode        RenderMode
+
+	packetsPlot *widgets.Plot
+	bytesPlot   *widgets.Plot
+	connsPlot   *widgets.Plot
+
+	tableRef []*widgets.Table
+	grid     *termui.Grid
+	shiftIdx int
+	mode     RenderMode
 }
 
 type RenderMode uint8
@@ -31,7 +39,7 @@ type RenderMode uint8
 const (
 	RModeBytes RenderMode = iota
 	RModePackets
-	RModePlot
+	RModeProcess
 )
 
 func NewUIComponent(mode RenderMode) *UIComponent {
@@ -110,6 +118,7 @@ func newTable(title string) *widgets.Table {
 	table.TextAlignment = termui.AlignLeft
 	table.TextStyle = termui.NewStyle(termui.ColorClear)
 	table.BorderStyle = termui.NewStyle(termui.ColorClear)
+	table.VerticalLine = ' '
 	table.RowStyles = map[int]termui.Style{0: termui.NewStyle(termui.ColorCyan)}
 	return table
 }

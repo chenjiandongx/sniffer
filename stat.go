@@ -145,12 +145,14 @@ type StatsManager struct {
 	mut   sync.Mutex
 	ring  *deque.Deque
 	ratio int
+	mode  RenderMode
 }
 
-func NewStatsManager(ratio int) *StatsManager {
+func NewStatsManager(ratio int, mode RenderMode) *StatsManager {
 	return &StatsManager{
 		ring:  deque.New(),
 		ratio: ratio,
+		mode:  mode,
 	}
 }
 
@@ -199,6 +201,12 @@ func (s *StatsManager) GetSnapshot() *Snapshot {
 		stat := s.ring.At(i).(Stat)
 		for conn, info := range stat.Utilization {
 			procName := s.getProcName(stat.OpenSockets, conn.Local)
+			if s.mode == RModeProcess {
+				if procName == unknownProcessName {
+					continue
+				}
+			}
+
 			if _, ok := connections[conn]; !ok {
 				connections[conn] = &ConnectionData{
 					InterfaceName: info.Interface,

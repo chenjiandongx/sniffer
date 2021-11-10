@@ -6,7 +6,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -14,19 +13,16 @@ import (
 )
 
 type lsofConn struct {
-	invoker Invoker
+	invoker LsofInvoker
 }
 
-type Invoker struct{}
+type LsofInvoker struct{}
 
-func (i Invoker) Command(name string, arg ...string) ([]byte, error) {
+func (i LsofInvoker) Exec() ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	return i.CommandWithContext(ctx, name, arg...)
-}
 
-func (i Invoker) CommandWithContext(ctx context.Context, name string, arg ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, arg...)
+	cmd := exec.CommandContext(ctx, "lsof", "-n", "-R", "-P", "-iTCP", "-iUDP", "-s", "TCP:ESTABLISHED", "+c", "0")
 
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
@@ -43,27 +39,47 @@ func (i Invoker) CommandWithContext(ctx context.Context, name string, arg ...str
 	return buf.Bytes(), nil
 }
 
-func (lc *lsofConn) GetProcSockets(pid int32) (OpenSockets, error) { return nil, nil }
+func (lc *lsofConn) GetProcSockets(pids ...int32) (OpenSockets, error) {
+	return lc.getOpenSockets(pids...)
+}
 
 func (lc *lsofConn) GetOpenSockets() (OpenSockets, error) {
+	return lc.getOpenSockets()
+}
+
+func (lc *lsofConn) getOpenSockets(pids ...int32) (OpenSockets, error) {
 	sockets := make(OpenSockets)
-	output, err := lc.invoker.Command("lsof", "-n", "-P", "-iTCP", "-iUDP", "-s", "TCP:ESTABLISHED", "+c", "0")
+	output, err := lc.invoker.Exec()
 	if err != nil {
-		fmt.Println(err)
 		return sockets, err
+	}
+
+	set := make(map[int32]bool)
+	for _, pid := range pids {
+		set[pid] = true
 	}
 
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
 		fields := strings.Fields(line)
-		if len(fields) < 9 {
+		if len(fields) < 10 {
 			continue
 		}
 		procName := strings.ReplaceAll(fields[0], "\\x20", " ")
 
-		switch fields[7] {
+		if len(pids) > 0 {
+			pid, err := strconv.Atoi(fields[1])
+			if err != nil {
+				continue
+			}
+			if !set[int32(pid)] {
+				continue
+			}
+		}
+
+		switch fields[8] {
 		case "TCP":
-			addr := strings.Split(fields[8], "->")
+			addr := strings.Split(fields[9], "->")
 			if len(addr) != 2 {
 				continue
 			}
@@ -75,10 +91,21 @@ func (lc *lsofConn) GetOpenSockets() (OpenSockets, error) {
 			if err != nil {
 				continue
 			}
+
+			if len(pids) > 0 {
+				pid, err := strconv.Atoi(fields[1])
+				if err != nil {
+					continue
+				}
+				if !set[int32(pid)] {
+					continue
+				}
+			}
+
 			sockets[LocalSocket{IP: ipport[0], Port: uint16(port), Protocol: ProtoTCP}] = procName
 
 		case "UDP":
-			ipport := strings.Split(fields[8], ":")
+			ipport := strings.Split(fields[9], ":")
 			if len(ipport) != 2 {
 				continue
 			}

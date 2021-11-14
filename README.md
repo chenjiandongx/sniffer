@@ -1,12 +1,12 @@
 # sniffer
 
-*A modern alternative network traffic sniffer inspried by [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and [nethogs](https://github.com/raboof/nethogs)(C++) project*
+*A modern alternative network traffic sniffer inspried by the [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and the [nethogs](https://github.com/raboof/nethogs)(C++) project.*
 
 ## Introduction
 
-sniffer takes advantage of the [gopacket](https://github.com/google/gopacket) library to sniff geiven network interfaces and records packets info. `gopacket` provides a Golang wrapper for `libpcap` written in C with additional functionality.
+sniffer takes advantage of the [gopacket](https://github.com/google/gopacket) library to sniff geiven network interfaces and records packets info. `gopacket` provides a Golang wrapper for `libpcap` written in C and adds additional functionality.
 
-sniffer is a useful tool design for troubleshooting network issues since it can distinguish which process or connection causing the vast network traffic by different view modes. It's worth pointing out that sniffer is also responsive to the terminal window size, which makes it adapts all size of terminal automatically.
+sniffer is a useful tool designed for troubleshooting network issues since it can distinguish which process or connection causing the vast network traffic by different view modes. It's worth pointing out that sniffer is also responsive to the terminal window size, which makes it adapts all size of terminal automatically.
 
 
 ## Installation
@@ -27,6 +27,10 @@ sudo yum install libpcap libpcap-devel
 ```shell
 brew install libpcap
 ```
+
+**Windows**
+
+Windows need to have [npcap](https://nmap.org/npcap/) installed for capturing packets.
 
 after that, install sniffer
 

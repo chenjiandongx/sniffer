@@ -2,7 +2,7 @@
 
 *A modern alternative network traffic sniffer inspried by the [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and the [nethogs](https://github.com/raboof/nethogs)(C++) project.*
 
-https://user-images.githubusercontent.com/19553554/141692232-b7f6a45b-03d2-44a6-8df3-e3efb2fa0958.mov
+https://user-images.githubusercontent.com/19553554/141692419-da8b63e1-e936-4d14-8ff5-5893e20a1f27.mov
 
 ## Introduction
 

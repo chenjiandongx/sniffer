@@ -13,7 +13,7 @@ func NewApp() *cobra.Command {
 
 	app := &cobra.Command{
 		Use:     "sniffer",
-		Short:   "# A modern alternative network sniffer.",
+		Short:   "# A modern alternative network traffic sniffer.",
 		Version: "v0.1.0",
 		Run: func(cmd *cobra.Command, args []string) {
 			opt.ViewMode = ViewMode(mode)
@@ -42,7 +42,7 @@ func NewApp() *cobra.Command {
 	app.Flags().BoolVarP(&opt.DisableDNSResolve, "no-dns-resolve", "n", defaultOpts.DisableDNSResolve, "disable the DNS resolution")
 	app.Flags().IntSliceVarP(&opt.Pids, "pids", "p", defaultOpts.Pids, "pids to watch in processes mode (default all processes)")
 	app.Flags().IntVarP(&mode, "mode", "m", int(defaultOpts.ViewMode), "view mode of sniffer (0: bytes 1: packets 2: processes)")
-	app.Flags().StringVarP(&unit, "unit", "u", defaultOpts.Unit.String(), "unit of stats in processes mode, optional: B, KB, MB, GB")
+	app.Flags().StringVarP(&unit, "unit", "u", defaultOpts.Unit.String(), "unit of traffic stats in processes mode, optional: B, KB, MB, GB")
 
 	return app
 }

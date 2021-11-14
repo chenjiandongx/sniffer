@@ -13,13 +13,28 @@ func exit(s string) {
 	os.Exit(1)
 }
 
+// Options is the options set for the sniffer instance.
 type Options struct {
-	BPFFilter         string
-	Interval          int
-	ViewMode          ViewMode
-	DevicesPrefix     []string
-	Pids              []int
-	Unit              Unit
+	// BPFFilter is the string pcap filter with the BPF syntax
+	// eg. "tcp and port 80"
+	BPFFilter string
+
+	// Interval is the interval for refresh rate in seconds
+	Interval int
+
+	// ViewMode represents the sniffer view mode, optional: bytes, packets, processes
+	ViewMode ViewMode
+
+	// DevicesPrefix represents prefixed devices to monitor
+	DevicesPrefix []string
+
+	// Pids to watch in processes mode
+	Pids []int
+
+	// Unit of stats in processes mode, optional: B, KB, MB, GB
+	Unit Unit
+
+	// DisableDNSResolve decides whether if disable the DNS resolution
 	DisableDNSResolve bool
 }
 

@@ -161,7 +161,7 @@ func (s *StatsManager) Put(stat Stat) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	const maxsize = 5
+	const maxsize = 3
 	if s.ring.Len() >= maxsize {
 		s.ring.PopFront()
 	}

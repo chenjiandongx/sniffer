@@ -70,20 +70,21 @@ type Snapshot struct {
 	TotalDownloadBytes   int
 	TotalUploadPackets   int
 	TotalDownloadPackets int
+	TotalConnections     int
 }
 
-func (s *Snapshot) TopNProcesses(n int, mode RenderMode) []ProcessesResult {
+func (s *Snapshot) TopNProcesses(n int, mode ViewMode) []ProcessesResult {
 	var items []ProcessesResult
 	for k, v := range s.Processes {
 		items = append(items, ProcessesResult{ProcessName: k, Data: v})
 	}
 
 	switch mode {
-	case RModeBytes:
+	case ModeTableBytes:
 		sort.Slice(items, func(i, j int) bool {
 			return items[i].Data.DownloadBytes+items[i].Data.UploadBytes > items[j].Data.DownloadBytes+items[j].Data.UploadBytes
 		})
-	case RModePackets:
+	case ModeTablePackets:
 		sort.Slice(items, func(i, j int) bool {
 			return items[i].Data.DownloadPackets+items[i].Data.UploadPackets > items[j].Data.DownloadPackets+items[j].Data.UploadPackets
 		})
@@ -95,18 +96,18 @@ func (s *Snapshot) TopNProcesses(n int, mode RenderMode) []ProcessesResult {
 	return items[:n]
 }
 
-func (s *Snapshot) TopNRemoteAddrs(n int, mode RenderMode) []RemoteAddrsResult {
+func (s *Snapshot) TopNRemoteAddrs(n int, mode ViewMode) []RemoteAddrsResult {
 	var items []RemoteAddrsResult
 	for k, v := range s.RemoteAddrs {
 		items = append(items, RemoteAddrsResult{Addr: k, Data: v})
 	}
 
 	switch mode {
-	case RModeBytes:
+	case ModeTableBytes:
 		sort.Slice(items, func(i, j int) bool {
 			return items[i].Data.DownloadBytes+items[i].Data.UploadBytes > items[j].Data.DownloadBytes+items[j].Data.UploadBytes
 		})
-	case RModePackets:
+	case ModeTablePackets:
 		sort.Slice(items, func(i, j int) bool {
 			return items[i].Data.DownloadPackets+items[i].Data.UploadPackets > items[j].Data.DownloadPackets+items[j].Data.UploadPackets
 		})
@@ -118,18 +119,18 @@ func (s *Snapshot) TopNRemoteAddrs(n int, mode RenderMode) []RemoteAddrsResult {
 	return items[:n]
 }
 
-func (s *Snapshot) TopNConnections(n int, mode RenderMode) []ConnectionsResult {
+func (s *Snapshot) TopNConnections(n int, mode ViewMode) []ConnectionsResult {
 	var items []ConnectionsResult
 	for k, v := range s.Connections {
 		items = append(items, ConnectionsResult{Conn: k, Data: v})
 	}
 
 	switch mode {
-	case RModeBytes:
+	case ModeTableBytes:
 		sort.Slice(items, func(i, j int) bool {
 			return items[i].Data.DownloadBytes+items[i].Data.UploadBytes > items[j].Data.DownloadBytes+items[j].Data.UploadBytes
 		})
-	case RModePackets:
+	case ModeTablePackets:
 		sort.Slice(items, func(i, j int) bool {
 			return items[i].Data.DownloadPackets+items[i].Data.UploadPackets > items[j].Data.DownloadPackets+items[j].Data.UploadPackets
 		})
@@ -145,14 +146,14 @@ type StatsManager struct {
 	mut   sync.Mutex
 	ring  *deque.Deque
 	ratio int
-	mode  RenderMode
+	mode  ViewMode
 }
 
-func NewStatsManager(ratio int, mode RenderMode) *StatsManager {
+func NewStatsManager(opt Options) *StatsManager {
 	return &StatsManager{
 		ring:  deque.New(),
-		ratio: ratio,
-		mode:  mode,
+		ratio: opt.Interval,
+		mode:  opt.ViewMode,
 	}
 }
 
@@ -181,32 +182,66 @@ func (s *StatsManager) getProcName(openSockets OpenSockets, localSocket LocalSoc
 	return unknownProcessName
 }
 
-func (s *StatsManager) GetSnapshot() *Snapshot {
+func (s *StatsManager) GetStats() interface{} {
 	s.mut.Lock()
 	defer s.mut.Unlock()
-
-	processes := map[string]*NetworkData{}
-	remoteAddr := map[string]*NetworkData{}
-	connections := map[Connection]*ConnectionData{}
-	visited := map[Connection]bool{}
-
-	var totalUploadBytes, totalDownloadBytes, totalUploadPackets, totalDownloadPackets int
 
 	size := s.ring.Len()
 	if size <= 0 {
 		return nil
 	}
 
+	if s.mode == ModePlotProcesses {
+		return s.getNetworkData(size)
+	}
+	return s.getSnapshot(size)
+}
+
+func (s *StatsManager) getNetworkData(size int) *NetworkData {
+	visited := map[Connection]bool{}
+	var uploadBytes, downloadBytes, uploadPackets, downloadPackets, connections int
+
 	for i := 0; i < size; i++ {
 		stat := s.ring.At(i).(Stat)
 		for conn, info := range stat.Utilization {
 			procName := s.getProcName(stat.OpenSockets, conn.Local)
-			if s.mode == RModeProcess {
-				if procName == unknownProcessName {
-					continue
-				}
+			if procName == unknownProcessName {
+				continue
 			}
 
+			if !visited[conn] {
+				connections++
+				visited[conn] = true
+			}
+
+			uploadBytes += info.UploadBytes
+			downloadBytes += info.DownloadBytes
+			uploadPackets += info.UploadPackets
+			downloadPackets += info.DownloadPackets
+		}
+	}
+
+	size = size * s.ratio
+	return &NetworkData{
+		UploadBytes:     uploadBytes / size,
+		DownloadBytes:   downloadBytes / size,
+		UploadPackets:   uploadPackets / size,
+		DownloadPackets: downloadPackets / size,
+		ConnCount:       connections,
+	}
+}
+
+func (s *StatsManager) getSnapshot(size int) *Snapshot {
+	processes := map[string]*NetworkData{}
+	remoteAddr := map[string]*NetworkData{}
+	connections := map[Connection]*ConnectionData{}
+	visited := map[Connection]bool{}
+	var totalUploadBytes, totalDownloadBytes, totalUploadPackets, totalDownloadPackets, totalConnections int
+
+	for i := 0; i < size; i++ {
+		stat := s.ring.At(i).(Stat)
+		for conn, info := range stat.Utilization {
+			procName := s.getProcName(stat.OpenSockets, conn.Local)
 			if _, ok := connections[conn]; !ok {
 				connections[conn] = &ConnectionData{
 					InterfaceName: info.Interface,
@@ -222,6 +257,7 @@ func (s *StatsManager) GetSnapshot() *Snapshot {
 				remoteAddr[conn.Remote.IP] = &NetworkData{}
 			}
 			if !visited[conn] {
+				totalConnections++
 				remoteAddr[conn.Remote.IP].ConnCount++
 			}
 			remoteAddr[conn.Remote.IP].UploadBytes += info.UploadBytes
@@ -232,13 +268,13 @@ func (s *StatsManager) GetSnapshot() *Snapshot {
 			if _, ok := processes[procName]; !ok {
 				processes[procName] = &NetworkData{}
 			}
+			if !visited[conn] {
+				processes[procName].ConnCount++
+			}
 			processes[procName].UploadBytes += info.UploadBytes
 			processes[procName].DownloadBytes += info.DownloadBytes
 			processes[procName].UploadPackets += info.UploadPackets
 			processes[procName].DownloadPackets += info.DownloadPackets
-			if !visited[conn] {
-				processes[procName].ConnCount++
-			}
 
 			totalUploadPackets += info.UploadPackets
 			totalDownloadPackets += info.DownloadPackets
@@ -267,5 +303,6 @@ func (s *StatsManager) GetSnapshot() *Snapshot {
 		TotalDownloadBytes:   totalDownloadBytes / size,
 		TotalUploadPackets:   totalUploadPackets / size,
 		TotalDownloadPackets: totalDownloadPackets / size,
+		TotalConnections:     totalConnections,
 	}
 }

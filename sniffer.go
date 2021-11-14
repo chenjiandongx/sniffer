@@ -1,53 +1,50 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/gizak/termui/v3"
 )
 
-type options struct {
-	BPFFilter     string
-	Interval      int
-	RenderMode    RenderMode
-	DevicesPrefix []string
+func exit(s string) {
+	fmt.Println("Start sniffer failed:", s)
+	os.Exit(1)
 }
 
-var defaultOptions = options{
-	BPFFilter:     "tcp or udp",
-	Interval:      1,
-	RenderMode:    RModeBytes,
-	DevicesPrefix: []string{"en", "lo", "eth", "em", "bond"},
+type Options struct {
+	BPFFilter         string
+	Interval          int
+	ViewMode          ViewMode
+	DevicesPrefix     []string
+	Pids              []int
+	Unit              Unit
+	DisableDNSResolve bool
 }
 
-type OptionsFn func(opt *options)
-
-func WithBPFFilter(filter string) OptionsFn {
-	return func(opt *options) {
-		opt.BPFFilter = filter
+func (o Options) Validate() error {
+	if err := o.ViewMode.Validate(); err != nil {
+		return err
 	}
-}
-
-func WithInterval(interval int) OptionsFn {
-	return func(opt *options) {
-		opt.Interval = interval
+	if err := o.Unit.Validate(); err != nil {
+		return err
 	}
+	return nil
 }
 
-func WithRenderMode(mode RenderMode) OptionsFn {
-	return func(opt *options) {
-		opt.RenderMode = mode
-	}
-}
-
-func WithDevicesPrefix(devicesPrefix []string) OptionsFn {
-	return func(opt *options) {
-		opt.DevicesPrefix = devicesPrefix
+func DefaultOptions() Options {
+	return Options{
+		BPFFilter:         "tcp or udp",
+		Interval:          1,
+		ViewMode:          ModeTableBytes,
+		Unit:              UnitKB,
+		DisableDNSResolve: false,
 	}
 }
 
 type Sniffer struct {
-	opts          *options
+	opts          Options
 	dnsResolver   *DNSResolver
 	pcapClient    *PcapClient
 	statsManager  *StatsManager
@@ -55,23 +52,19 @@ type Sniffer struct {
 	socketFetcher SocketFetcher
 }
 
-func NewSniffer(fn ...OptionsFn) (*Sniffer, error) {
-	opts := defaultOptions
-	for _, f := range fn {
-		f(&opts)
-	}
+func NewSniffer(opts Options) (*Sniffer, error) {
 	dnsResolver := NewDnsResolver()
-	pcapClient, err := NewPcapClient(dnsResolver.Lookup, opts.BPFFilter, opts.DevicesPrefix)
+	pcapClient, err := NewPcapClient(dnsResolver.Lookup, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Sniffer{
-		opts:          &opts,
+		opts:          opts,
 		dnsResolver:   dnsResolver,
 		pcapClient:    pcapClient,
-		statsManager:  NewStatsManager(opts.Interval, opts.RenderMode),
-		ui:            NewUIComponent(opts.RenderMode),
+		statsManager:  NewStatsManager(opts),
+		ui:            NewUIComponent(opts),
 		socketFetcher: GetSocketFetcher(),
 	}, nil
 }
@@ -87,12 +80,12 @@ func (s *Sniffer) Start() {
 		case e := <-events:
 			switch e.ID {
 			case "<Tab>":
-				s.ui.Shift()
+				s.ui.viewer.Shift()
 			case "<Space>":
 				paused = !paused
 			case "<Resize>":
 				payload := e.Payload.(termui.Resize)
-				s.ui.Resize(payload.Width, payload.Height)
+				s.ui.viewer.Resize(payload.Width, payload.Height)
 			case "q", "Q", "<C-c>":
 				return
 			}
@@ -108,7 +101,7 @@ func (s *Sniffer) Start() {
 func (s *Sniffer) Close() {
 	s.pcapClient.Close()
 	s.dnsResolver.Close()
-	termui.Close()
+	s.ui.Close()
 }
 
 func (s *Sniffer) Refresh() {
@@ -119,5 +112,5 @@ func (s *Sniffer) Refresh() {
 	}
 
 	s.statsManager.Put(Stat{OpenSockets: openSockets, Utilization: utilization})
-	s.ui.Render(s.statsManager.GetSnapshot())
+	s.ui.viewer.Render(s.statsManager.GetStats())
 }

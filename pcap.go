@@ -70,26 +70,29 @@ type pcapHandler struct {
 }
 
 type PcapClient struct {
-	bindIPs       map[string]bool
-	handlers      []pcapHandler
-	bpfFilter     string
-	devicesPrefix []string
-	ch            chan []Segment
-	wg            sync.WaitGroup
-	lookup        Lookup
-	utilization   Utilization
-	utilmut       sync.Mutex
+	bindIPs           map[string]bool
+	handlers          []pcapHandler
+	bpfFilter         string
+	devicesPrefix     []string
+	disableDNSResolve bool
+	ch                chan []Segment
+	wg                sync.WaitGroup
+	lookup            Lookup
+	utilization       Utilization
+	utilmut           sync.Mutex
+	done              bool
 }
 
-func NewPcapClient(lookup Lookup, bpfFilter string, devicesPrefix []string) (*PcapClient, error) {
+func NewPcapClient(lookup Lookup, opt Options) (*PcapClient, error) {
 	client := &PcapClient{
-		bindIPs:       make(map[string]bool),
-		handlers:      make([]pcapHandler, 0),
-		ch:            make(chan []Segment, 8),
-		lookup:        lookup,
-		utilization:   make(Utilization),
-		bpfFilter:     bpfFilter,
-		devicesPrefix: devicesPrefix,
+		bindIPs:           make(map[string]bool),
+		handlers:          make([]pcapHandler, 0),
+		ch:                make(chan []Segment, 8),
+		lookup:            lookup,
+		utilization:       make(Utilization),
+		bpfFilter:         opt.BPFFilter,
+		devicesPrefix:     opt.DevicesPrefix,
+		disableDNSResolve: opt.DisableDNSResolve,
 	}
 
 	if err := client.getAvailableDevices(); err != nil {
@@ -111,19 +114,26 @@ func (c *PcapClient) getAvailableDevices() error {
 	}
 
 	for _, device := range all {
-		var found bool
-		for _, prefix := range c.devicesPrefix {
-			if strings.HasPrefix(device.Name, prefix) {
-				found = true
-			}
-		}
-		if !found {
+		if device.Name == "any" {
 			continue
+		}
+
+		if len(c.devicesPrefix) > 0 {
+			var found bool
+			for _, prefix := range c.devicesPrefix {
+				if strings.HasPrefix(device.Name, prefix) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
 		}
 
 		handler, err := c.getHandler(device.Name, c.bpfFilter)
 		if err != nil {
-			return err
+			continue
 		}
 		c.handlers = append(c.handlers, pcapHandler{device: device.Name, handle: handler})
 		for _, addr := range device.Addresses {
@@ -218,16 +228,17 @@ func (c *PcapClient) parsePacket(device string, packet gopacket.Packet) *Segment
 	switch seg.Direction {
 	case DirectionUpload:
 		remoteIP = dstIP
-		if protocol == ProtoTCP {
+		if protocol == ProtoTCP && !c.disableDNSResolve {
 			remoteIP = c.lookup(dstIP)
 		}
 		seg.Connection = Connection{
 			Local:  LocalSocket{IP: srcIP, Port: srcPort, Protocol: protocol},
 			Remote: RemoteSocket{IP: remoteIP, Port: dstPort},
 		}
+
 	case DirectionDownload:
 		remoteIP = srcIP
-		if protocol == ProtoTCP {
+		if protocol == ProtoTCP && !c.disableDNSResolve {
 			remoteIP = c.lookup(srcIP)
 		}
 		seg.Connection = Connection{
@@ -244,7 +255,7 @@ func (c *PcapClient) listen(ph pcapHandler) {
 	defer c.wg.Done()
 
 	ticker := time.Tick(time.Millisecond * 100)
-	const batch = 1024
+	const batch = 512
 
 	packetSource := gopacket.NewPacketSource(ph.handle, ph.handle.LinkType())
 	packetSource.Lazy = true
@@ -255,6 +266,9 @@ func (c *PcapClient) listen(ph pcapHandler) {
 		select {
 		case <-ticker:
 			if len(segs) > 0 {
+				if c.done {
+					return
+				}
 				c.ch <- segs
 				segs = segs[:0]
 			}
@@ -306,6 +320,7 @@ func (c *PcapClient) Close() {
 	for _, handler := range c.handlers {
 		handler.handle.Close()
 	}
+	c.done = true
 	close(c.ch)
 	c.wg.Wait()
 }

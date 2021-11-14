@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/gammazero/deque"
 	"github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
@@ -14,92 +16,67 @@ import (
 const (
 	maxRows    = 64
 	timeFormat = "15:04:05"
+	padding    = 6
 )
 
 type UIComponent struct {
-	header *widgets.Paragraph
-	footer *widgets.Paragraph
-
-	processes   *widgets.Table
-	remoteAddrs *widgets.Table
-	connections *widgets.Table
-
-	packetsPlot *widgets.Plot
-	bytesPlot   *widgets.Plot
-	connsPlot   *widgets.Plot
-
-	tableRef []*widgets.Table
-	grid     *termui.Grid
-	shiftIdx int
-	mode     RenderMode
+	viewer Viewer
 }
 
-type RenderMode uint8
+type ViewMode uint8
+
+func (vm ViewMode) Validate() error {
+	switch vm {
+	case ModeTableBytes, ModeTablePackets, ModePlotProcesses:
+		return nil
+	}
+	return fmt.Errorf("invalid view mode %d", vm)
+}
 
 const (
-	RModeBytes RenderMode = iota
-	RModePackets
-	RModeProcess
+	ModeTableBytes ViewMode = iota
+	ModeTablePackets
+	ModePlotProcesses
 )
 
-func NewUIComponent(mode RenderMode) *UIComponent {
-	ui := &UIComponent{
-		header:      newHeader(mode),
-		footer:      newFooter(),
-		processes:   newTable("Process Name"),
-		remoteAddrs: newTable("Remote Address"),
-		connections: newTable("Connections"),
-		mode:        mode,
-	}
+type Unit string
 
-	ui.tableRef = []*widgets.Table{ui.processes, ui.remoteAddrs, ui.connections}
-	if err := termui.Init(); err != nil {
-		panic(err)
-	}
+const (
+	UnitB  Unit = "B"
+	UnitKB Unit = "KB"
+	UnitMB Unit = "MB"
+	UnitGB Unit = "GB"
+)
 
-	width, height := termui.TerminalDimensions()
-	ui.grid = newGrid(ui.shiftIdx, width, height, ui.header, ui.footer, ui.tableRef)
-	return ui
+func (u Unit) Validate() error {
+	switch u {
+	case UnitB, UnitKB, UnitMB, UnitGB:
+		return nil
+	}
+	return fmt.Errorf("invalid unit %s", u)
 }
 
-func newGrid(shift, width, height int, header, footer *widgets.Paragraph, tables []*widgets.Table) *termui.Grid {
-	grid := termui.NewGrid()
-	grid.SetRect(0, 0, width, height)
-
-	num := len(tables)
-	w := (width) / 12
-	tables[(shift+1)%num].ColumnWidths = []int{w * 2, w * 2, (w * 2) - 1}
-	tables[(shift+2)%num].ColumnWidths = []int{w * 2, w * 2, (w * 2) - 1}
-	tables[(shift+3)%num].ColumnWidths = []int{w * 6, w * 3, (w * 3) - 1}
-
-	grid.Set(
-		termui.NewRow(0.03, termui.NewCol(1.0, header)),
-		termui.NewRow(0.47,
-			termui.NewCol(1.0/2, tables[(shift+1)%num]), termui.NewCol(1.0/2, tables[(shift+2)%num]),
-		),
-		termui.NewRow(0.47, termui.NewCol(1.0, tables[(shift+3)%num])),
-		termui.NewRow(0.03, termui.NewCol(1.0, footer)),
-	)
-
-	return grid
+func (u Unit) String() string {
+	return string(u)
 }
 
-func newHeader(mode RenderMode) *widgets.Paragraph {
-	var msg string
-	switch mode {
-	case RModeBytes:
-		msg = "Bytes/s"
-	case RModePackets:
-		msg = "Packets/s"
+func (u Unit) Ratio() float64 {
+	var ratio float64 = 1
+	switch u {
+	case UnitB:
+		ratio = 1
+	case UnitKB:
+		ratio = 1024
+	case UnitMB:
+		ratio = 1024 * 1024
+	case UnitGB:
+		ratio = 1024 * 1024 * 1024
 	}
-
-	text := fmt.Sprintf("Now: %s  Total Up / Down <%s>: 0ps / 0ps", time.Now().Format(timeFormat), msg)
-	return newParagraph(text)
+	return ratio
 }
 
 func newFooter() *widgets.Paragraph {
-	text := "Press <Space> to pause. Use <Tab> to rearrange tables"
-	return newParagraph(text)
+	return newParagraph("Press <Space> to pause, <q>/<Ctrl+C> to exit. Use <Tab> to rearrange tables")
 }
 
 func newParagraph(text string) *widgets.Paragraph {
@@ -113,7 +90,7 @@ func newParagraph(text string) *widgets.Paragraph {
 
 func newTable(title string) *widgets.Table {
 	table := widgets.NewTable()
-	table.Title = fmt.Sprintf("Utilization <%s>", title)
+	table.Title = title
 	table.RowSeparator = false
 	table.TextAlignment = termui.AlignLeft
 	table.TextStyle = termui.NewStyle(termui.ColorClear)
@@ -123,87 +100,325 @@ func newTable(title string) *widgets.Table {
 	return table
 }
 
-func (ui *UIComponent) humanizeNumber(n int) string {
+func newPlot(title string, num int) *widgets.Plot {
+	plot := widgets.NewPlot()
+	plot.Title = title
+	plot.TitleStyle = termui.NewStyle(termui.ColorWhite)
+	plot.BorderStyle = termui.NewStyle(termui.ColorClear)
+	plot.Data = make([][]float64, num)
+	plot.LineColors = []termui.Color{termui.ColorBlue, termui.ColorGreen}
+	plot.AxesColor = termui.ColorClear
+	plot.DisableXAxisLabel = true
+	return plot
+}
+
+func NewUIComponent(opt Options) *UIComponent {
+	ui := &UIComponent{}
+	switch opt.ViewMode {
+	case ModeTableBytes, ModeTablePackets:
+		ui.viewer = &TableViewer{
+			footer:      newFooter(),
+			processes:   newTable("Process Name"),
+			remoteAddrs: newTable("Remote Address"),
+			connections: newTable("Connections"),
+			mode:        opt.ViewMode,
+		}
+	default:
+		ui.viewer = &PlotViewer{
+			footer:      newFooter(),
+			packetsPlot: newPlot("Packets: Blue Up / Green Down", 2),
+			bytesPlot:   newPlot(fmt.Sprintf("Bytes: <Unit %sps> Blue Up / Green Down", opt.Unit.String()), 2),
+			connsPlot:   newPlot("Connections", 1),
+			pids:        opt.Pids,
+			unit:        opt.Unit,
+		}
+	}
+
+	if err := termui.Init(); err != nil {
+		exit(err.Error())
+	}
+	ui.viewer.Setup()
+	return ui
+}
+
+func (ui *UIComponent) Close() {
+	termui.Close()
+}
+
+type queue struct {
+	size  int
+	deque *deque.Deque
+}
+
+func (q *queue) Put(v float64) {
+	if q.deque.Len() >= q.size {
+		q.deque.PopFront()
+	}
+	q.deque.PushBack(v)
+}
+
+func (q *queue) Get(ratio float64) []float64 {
+	var nums []float64
+	l := q.deque.Len()
+	for i := 0; i < l; i++ {
+		nums = append(nums, q.deque.At(i).(float64)/ratio)
+	}
+	return nums
+}
+
+func (q *queue) Resize(size int) {
+	for q.deque.Len() >= size {
+		q.deque.PopFront()
+	}
+	q.size = size
+}
+
+type Viewer interface {
+	Setup()
+	Shift()
+	Resize(width, height int)
+	Render(stats interface{})
+}
+
+type PlotViewer struct {
+	header *widgets.Paragraph
+	footer *widgets.Paragraph
+
+	packetsPlot     *widgets.Plot
+	packetsUpList   *queue
+	packetsDownList *queue
+	bytesPlot       *widgets.Plot
+	bytesUpList     *queue
+	bytesDownList   *queue
+	connsPlot       *widgets.Plot
+	connsList       *queue
+	plotRef         []*widgets.Plot
+
+	dataRef  [][]*queue
+	grid     *termui.Grid
+	shiftIdx int
+	count    int
+	unit     Unit
+	pids     []int
+}
+
+func (pv *PlotViewer) Setup() {
+	pv.header = newParagraph(pv.getHeaderText())
+	pv.plotRef = []*widgets.Plot{pv.bytesPlot, pv.packetsPlot, pv.connsPlot}
+	width, height := termui.TerminalDimensions()
+
+	pv.bytesUpList = pv.newQueue(width/2 - padding)
+	pv.bytesDownList = pv.newQueue(width/2 - padding)
+	pv.packetsUpList = pv.newQueue(width/2 - padding)
+	pv.packetsDownList = pv.newQueue(width/2 - padding)
+	pv.connsList = pv.newQueue(width/2 - padding)
+	pv.shiftIdx = -1
+
+	pv.dataRef = [][]*queue{{pv.bytesUpList, pv.bytesDownList}, {pv.packetsUpList, pv.packetsDownList}, {pv.connsList}}
+	pv.grid = pv.newGrid(width, height)
+}
+
+func (pv *PlotViewer) newQueue(size int) *queue {
+	return &queue{size: size, deque: deque.New()}
+}
+
+func (pv *PlotViewer) getHeaderText() string {
+	now := time.Now().Format(timeFormat)
+	if len(pv.pids) <= 0 {
+		return fmt.Sprintf("[Processes Mode] Now: %s  Pids All", now)
+	}
+	buf := &bytes.Buffer{}
+	for i, pid := range pv.pids {
+		buf.WriteString(strconv.Itoa(int(pid)))
+		if i+1 != len(pv.pids) {
+			buf.WriteString(" ")
+		}
+	}
+	return fmt.Sprintf("[Processes Mode] Now: %s  Pids </ %s />", now, buf.String())
+}
+
+func (pv *PlotViewer) updatePackets(data *NetworkData) {
+	pv.packetsUpList.Put(float64(data.UploadPackets))
+	pv.packetsDownList.Put(float64(data.DownloadPackets))
+	pv.packetsPlot.Data[0] = pv.packetsUpList.Get(1)
+	pv.packetsPlot.Data[1] = pv.packetsDownList.Get(1)
+}
+
+func (pv *PlotViewer) updateBytes(data *NetworkData) {
+	pv.bytesUpList.Put(float64(data.UploadBytes))
+	pv.bytesDownList.Put(float64(data.DownloadBytes))
+	pv.bytesPlot.Data[0] = pv.bytesUpList.Get(pv.unit.Ratio())
+	pv.bytesPlot.Data[1] = pv.bytesDownList.Get(pv.unit.Ratio())
+}
+
+func (pv *PlotViewer) updateConnections(data *NetworkData) {
+	pv.connsList.Put(float64(data.ConnCount))
+	pv.connsPlot.Data[0] = pv.connsList.Get(1)
+}
+
+func (pv *PlotViewer) newGrid(width, height int) *termui.Grid {
+	grid := termui.NewGrid()
+	grid.SetRect(0, 0, width, height)
+
+	num := len(pv.plotRef)
+	for _, lst := range pv.dataRef[(pv.shiftIdx+1)%num] {
+		lst.Resize(width/2 - padding)
+	}
+	for _, lst := range pv.dataRef[(pv.shiftIdx+2)%num] {
+		lst.Resize(width/2 - padding)
+	}
+	for _, lst := range pv.dataRef[(pv.shiftIdx+3)%num] {
+		lst.Resize(width - padding)
+	}
+
+	grid.Set(
+		termui.NewRow(0.03, termui.NewCol(1.0, pv.header)),
+		termui.NewRow(0.47,
+			termui.NewCol(1.0/2, pv.plotRef[(pv.shiftIdx+1)%num]),
+			termui.NewCol(1.0/2, pv.plotRef[(pv.shiftIdx+2)%num]),
+		),
+		termui.NewRow(0.47, termui.NewCol(1.0, pv.plotRef[(pv.shiftIdx+3)%num])),
+		termui.NewRow(0.03, termui.NewCol(1.0, pv.footer)),
+	)
+	return grid
+}
+
+func (pv *PlotViewer) Shift() {
+	pv.shiftIdx++
+	width, height := termui.TerminalDimensions()
+	pv.grid = pv.newGrid(width, height)
+	termui.Render(pv.grid)
+}
+
+func (pv *PlotViewer) Resize(width, height int) {
+	pv.grid = pv.newGrid(width, height)
+	termui.Render(pv.grid)
+}
+
+func (pv *PlotViewer) Render(stats interface{}) {
+	if stats == nil {
+		return
+	}
+
+	pv.header.Text = pv.getHeaderText()
+	pv.count++
+	data := stats.(*NetworkData)
+
+	pv.updatePackets(data)
+	pv.updateBytes(data)
+	pv.updateConnections(data)
+	if pv.count <= 1 {
+		return
+	}
+	termui.Render(pv.grid)
+}
+
+type TableViewer struct {
+	header      *widgets.Paragraph
+	footer      *widgets.Paragraph
+	processes   *widgets.Table
+	remoteAddrs *widgets.Table
+	connections *widgets.Table
+	tableRef    []*widgets.Table
+	grid        *termui.Grid
+	shiftIdx    int
+	mode        ViewMode
+}
+
+func (tv *TableViewer) Setup() {
+	tv.header = newParagraph(tv.getHeaderText(0, "", ""))
+	tv.tableRef = []*widgets.Table{tv.processes, tv.remoteAddrs, tv.connections}
+	width, height := termui.TerminalDimensions()
+	tv.grid = tv.newGrid(width, height)
+}
+
+func (tv *TableViewer) getHeaderText(conn int, up, down string) string {
+	now := time.Now().Format(timeFormat)
+	var text string
+	switch tv.mode {
+	case ModeTableBytes:
+		text = fmt.Sprintf("[Bytes Mode] Now: %s  Total </ Connections: %d Up: %s Down: %s />", now, conn, up, down)
+	case ModeTablePackets:
+		text = fmt.Sprintf("[Packets Mode] Now: %s  Total </ Connections: %d Up: %s Down: %s />", now, conn, up, down)
+	}
+	return text
+}
+
+func (tv *TableViewer) humanizeNum(n int) string {
 	var s string
-	switch ui.mode {
-	case RModeBytes:
+	switch tv.mode {
+	case ModeTableBytes:
 		s = strings.ReplaceAll(humanize.IBytes(uint64(n)), " ", "")
-	case RModePackets:
+	case ModeTablePackets:
 		s = humanize.Comma(int64(n))
 	}
 	return s + "ps"
 }
 
-func (ui *UIComponent) emptyRow(column int) []string {
-	return make([]string, column)
-}
-
-func (ui *UIComponent) updateHeader(snapshot *Snapshot) {
-	var up, down, msg string
-	switch ui.mode {
-	case RModeBytes:
-		up = ui.humanizeNumber(snapshot.TotalUploadBytes)
-		down = ui.humanizeNumber(snapshot.TotalDownloadBytes)
-		msg = "Bytes/s"
-	case RModePackets:
-		up = ui.humanizeNumber(snapshot.TotalUploadPackets)
-		down = ui.humanizeNumber(snapshot.TotalDownloadPackets)
-		msg = "Packets/s"
+func (tv *TableViewer) updateHeader(snapshot *Snapshot) {
+	var up, down string
+	switch tv.mode {
+	case ModeTableBytes:
+		up = tv.humanizeNum(snapshot.TotalUploadBytes)
+		down = tv.humanizeNum(snapshot.TotalDownloadBytes)
+	case ModeTablePackets:
+		up = tv.humanizeNum(snapshot.TotalUploadPackets)
+		down = tv.humanizeNum(snapshot.TotalDownloadPackets)
 	}
-	ui.header.Text = fmt.Sprintf("Now: %s  Total Up / Down <%s>: %s / %s", time.Now().Format(timeFormat), msg, up, down)
+	tv.header.Text = tv.getHeaderText(snapshot.TotalConnections, up, down)
 }
 
-func (ui *UIComponent) updateProcesses(snapshot *Snapshot) {
+func (tv *TableViewer) updateProcesses(snapshot *Snapshot) {
 	rows := make([][]string, 0)
-	for _, r := range snapshot.TopNProcesses(maxRows, ui.mode) {
+	for _, r := range snapshot.TopNProcesses(maxRows, tv.mode) {
 		var up, down string
-		switch ui.mode {
-		case RModeBytes:
-			up = ui.humanizeNumber(r.Data.UploadBytes)
-			down = ui.humanizeNumber(r.Data.DownloadBytes)
-		case RModePackets:
-			up = ui.humanizeNumber(r.Data.UploadPackets)
-			down = ui.humanizeNumber(r.Data.DownloadPackets)
+		switch tv.mode {
+		case ModeTableBytes:
+			up = tv.humanizeNum(r.Data.UploadBytes)
+			down = tv.humanizeNum(r.Data.DownloadBytes)
+		case ModeTablePackets:
+			up = tv.humanizeNum(r.Data.UploadPackets)
+			down = tv.humanizeNum(r.Data.DownloadPackets)
 		}
 		rows = append(rows, []string{r.ProcessName, strconv.Itoa(r.Data.ConnCount), up + " / " + down})
 	}
 
 	header := []string{"Process", "Connections", "Up / Down"}
-	ui.processes.Rows = [][]string{header, ui.emptyRow(3)}
-	ui.processes.Rows = append(ui.processes.Rows, rows...)
+	tv.processes.Rows = [][]string{header, make([]string, 3)}
+	tv.processes.Rows = append(tv.processes.Rows, rows...)
 }
 
-func (ui *UIComponent) updateRemoteAddrs(snapshot *Snapshot) {
+func (tv *TableViewer) updateRemoteAddrs(snapshot *Snapshot) {
 	rows := make([][]string, 0)
-	for _, r := range snapshot.TopNRemoteAddrs(maxRows, ui.mode) {
+	for _, r := range snapshot.TopNRemoteAddrs(maxRows, tv.mode) {
 		var up, down string
-		switch ui.mode {
-		case RModeBytes:
-			up = ui.humanizeNumber(r.Data.UploadBytes)
-			down = ui.humanizeNumber(r.Data.DownloadBytes)
-		case RModePackets:
-			up = ui.humanizeNumber(r.Data.UploadPackets)
-			down = ui.humanizeNumber(r.Data.DownloadPackets)
+		switch tv.mode {
+		case ModeTableBytes:
+			up = tv.humanizeNum(r.Data.UploadBytes)
+			down = tv.humanizeNum(r.Data.DownloadBytes)
+		case ModeTablePackets:
+			up = tv.humanizeNum(r.Data.UploadPackets)
+			down = tv.humanizeNum(r.Data.DownloadPackets)
 		}
 		rows = append(rows, []string{r.Addr, strconv.Itoa(r.Data.ConnCount), up + " / " + down})
 	}
 
 	header := []string{"Remote Address", "Connections", "Up / Down"}
-	ui.remoteAddrs.Rows = [][]string{header, ui.emptyRow(3)}
-	ui.remoteAddrs.Rows = append(ui.remoteAddrs.Rows, rows...)
+	tv.remoteAddrs.Rows = [][]string{header, make([]string, 3)}
+	tv.remoteAddrs.Rows = append(tv.remoteAddrs.Rows, rows...)
 }
 
-func (ui *UIComponent) updateConnections(snapshot *Snapshot) {
+func (tv *TableViewer) updateConnections(snapshot *Snapshot) {
 	rows := make([][]string, 0)
-	for _, r := range snapshot.TopNConnections(maxRows, ui.mode) {
+	for _, r := range snapshot.TopNConnections(maxRows, tv.mode) {
 		var up, down string
-		switch ui.mode {
-		case RModeBytes:
-			up = ui.humanizeNumber(r.Data.UploadBytes)
-			down = ui.humanizeNumber(r.Data.DownloadBytes)
-		case RModePackets:
-			up = ui.humanizeNumber(r.Data.UploadPackets)
-			down = ui.humanizeNumber(r.Data.DownloadPackets)
+		switch tv.mode {
+		case ModeTableBytes:
+			up = tv.humanizeNum(r.Data.UploadBytes)
+			down = tv.humanizeNum(r.Data.DownloadBytes)
+		case ModeTablePackets:
+			up = tv.humanizeNum(r.Data.UploadPackets)
+			down = tv.humanizeNum(r.Data.DownloadPackets)
 		}
 
 		conn := fmt.Sprintf("<%s>:%d => %s:%d (%s)",
@@ -217,28 +432,52 @@ func (ui *UIComponent) updateConnections(snapshot *Snapshot) {
 	}
 
 	header := []string{"Connections", "Process", "Up / Down"}
-	ui.connections.Rows = [][]string{header, ui.emptyRow(3)}
-	ui.connections.Rows = append(ui.connections.Rows, rows...)
+	tv.connections.Rows = [][]string{header, make([]string, 3)}
+	tv.connections.Rows = append(tv.connections.Rows, rows...)
 }
 
-func (ui *UIComponent) Shift() {
-	ui.shiftIdx++
+func (tv *TableViewer) newGrid(width, height int) *termui.Grid {
+	grid := termui.NewGrid()
+	grid.SetRect(0, 0, width, height)
+
+	num := len(tv.tableRef)
+	w := (width) / 12
+	tv.tableRef[(tv.shiftIdx+1)%num].ColumnWidths = []int{w * 2, w * 2, (w * 2) - 1}
+	tv.tableRef[(tv.shiftIdx+2)%num].ColumnWidths = []int{w * 2, w * 2, (w * 2) - 1}
+	tv.tableRef[(tv.shiftIdx+3)%num].ColumnWidths = []int{w * 6, w * 3, (w * 3) - 1}
+
+	grid.Set(
+		termui.NewRow(0.03, termui.NewCol(1.0, tv.header)),
+		termui.NewRow(0.47,
+			termui.NewCol(1.0/2, tv.tableRef[(tv.shiftIdx+1)%num]),
+			termui.NewCol(1.0/2, tv.tableRef[(tv.shiftIdx+2)%num]),
+		),
+		termui.NewRow(0.47, termui.NewCol(1.0, tv.tableRef[(tv.shiftIdx+3)%num])),
+		termui.NewRow(0.03, termui.NewCol(1.0, tv.footer)),
+	)
+	return grid
+}
+
+func (tv *TableViewer) Shift() {
+	tv.shiftIdx++
 	width, height := termui.TerminalDimensions()
-	ui.grid = newGrid(ui.shiftIdx, width, height, ui.header, ui.footer, ui.tableRef)
-	termui.Render(ui.grid)
+	tv.grid = tv.newGrid(width, height)
+	termui.Render(tv.grid)
 }
 
-func (ui *UIComponent) Resize(width, height int) {
-	ui.grid = newGrid(ui.shiftIdx, width, height, ui.header, ui.footer, ui.tableRef)
-	termui.Render(ui.grid)
+func (tv *TableViewer) Resize(width, height int) {
+	tv.grid = tv.newGrid(width, height)
+	termui.Render(tv.grid)
 }
 
-func (ui *UIComponent) Render(snapshot *Snapshot) {
-	if snapshot != nil {
-		ui.updateHeader(snapshot)
-		ui.updateProcesses(snapshot)
-		ui.updateRemoteAddrs(snapshot)
-		ui.updateConnections(snapshot)
+func (tv *TableViewer) Render(stats interface{}) {
+	snapshot := stats.(*Snapshot)
+	if snapshot == nil {
+		return
 	}
-	termui.Render(ui.grid)
+	tv.updateHeader(snapshot)
+	tv.updateProcesses(snapshot)
+	tv.updateRemoteAddrs(snapshot)
+	tv.updateConnections(snapshot)
+	termui.Render(tv.grid)
 }

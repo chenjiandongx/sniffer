@@ -101,7 +101,6 @@ func (lc *lsofConn) getOpenSockets(pids ...int32) (OpenSockets, error) {
 					continue
 				}
 			}
-
 			sockets[LocalSocket{IP: ipport[0], Port: uint16(port), Protocol: ProtoTCP}] = procName
 
 		case "UDP":

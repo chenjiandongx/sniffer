@@ -10,9 +10,9 @@ require (
 	github.com/google/gopacket v1.1.19
 	github.com/rs/dnscache v0.0.0-20211102005908-e0241e321417
 	github.com/shirou/gopsutil v3.21.10+incompatible
-	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/spf13/cobra v1.2.1
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	golang.org/x/sys v0.0.0-20210816074244-15123e1e1f71
 )
 
-replace github.com/gizak/termui/v3 v3.1.0 => ../../chenjiandongx/termui
+replace github.com/gizak/termui/v3 v3.1.0 => github.com/chenjiandongx/termui/v3 v3.1.1

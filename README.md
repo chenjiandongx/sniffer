@@ -2,6 +2,8 @@
 
 *A modern alternative network traffic sniffer inspried by the [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and the [nethogs](https://github.com/raboof/nethogs)(C++) project.*
 
+https://user-images.githubusercontent.com/19553554/141692232-b7f6a45b-03d2-44a6-8df3-e3efb2fa0958.mov
+
 ## Introduction
 
 sniffer takes advantage of the [gopacket](https://github.com/google/gopacket) library to sniff geiven network interfaces and records packets info. `gopacket` provides a Golang wrapper for `libpcap` written in C and adds additional functionality.

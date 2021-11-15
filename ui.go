@@ -287,11 +287,17 @@ func (pv *PlotViewer) Shift() {
 	pv.shiftIdx++
 	width, height := termui.TerminalDimensions()
 	pv.grid = pv.newGrid(width, height)
+	if pv.count <= 1 {
+		return
+	}
 	termui.Render(pv.grid)
 }
 
 func (pv *PlotViewer) Resize(width, height int) {
 	pv.grid = pv.newGrid(width, height)
+	if pv.count <= 1 {
+		return
+	}
 	termui.Render(pv.grid)
 }
 

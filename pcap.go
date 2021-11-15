@@ -107,8 +107,12 @@ func NewPcapClient(lookup Lookup, opt Options) (*PcapClient, error) {
 	return client, nil
 }
 
+func ListAllDevices() ([]pcap.Interface, error) {
+	return pcap.FindAllDevs()
+}
+
 func (c *PcapClient) getAvailableDevices() error {
-	all, err := pcap.FindAllDevs()
+	all, err := ListAllDevices()
 	if err != nil {
 		return err
 	}

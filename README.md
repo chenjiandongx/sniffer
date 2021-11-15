@@ -66,6 +66,7 @@ Flags:
   -d, --devices-prefix stringArray   prefixed devices to monitor (default [en,lo,eth,em,bond])
   -h, --help                         help for sniffer
   -i, --interval int                 interval for refresh rate in seconds (default 1)
+  -l, --list                         list all devices name
   -m, --mode int                     view mode of sniffer (0: bytes 1: packets 2: processes)
   -n, --no-dns-resolve               disable the DNS resolution
   -p, --pids ints                    pids to watch in processes mode (default all processes)

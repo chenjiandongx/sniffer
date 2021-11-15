@@ -1,15 +1,20 @@
 # sniffer
 
-*A modern alternative network traffic sniffer inspried by the [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and the [nethogs](https://github.com/raboof/nethogs)(C++) project.*
+*A modern alternative network traffic sniffer inspired by [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and [nethogs](https://github.com/raboof/nethogs)(C++).*
 
 https://user-images.githubusercontent.com/19553554/141692419-da8b63e1-e936-4d14-8ff5-5893e20a1f27.mov
 
 ## Introduction
 
-sniffer takes advantage of the [gopacket](https://github.com/google/gopacket) library to sniff geiven network interfaces and records packets info. `gopacket` provides a Golang wrapper for `libpcap` written in C and adds additional functionality.
+sniffer is designed for network troubleshooting. Without loading any kernel modules, it can be started at any time to analyze the processes or connections causing increases in network traffic. In addition, the GUI of it is responsive, which can fit with terminals of all sizes automatically.
 
-sniffer is a useful tool designed for troubleshooting network issues since it can distinguish which process or connection causing the vast network traffic by different view modes. It's worth pointing out that sniffer is also responsive to the terminal window size, which makes it adapts all size of terminal automatically.
+sniffer uses [gopacket](https://github.com/google/gopacket) to sniff the interfaces and record packet info. gopacket wraps the Golang version of `libpacp`, and provides some additional features. One of the projects which inspired the sniffer is `bandwhich`, which has a sophisticated interface and multiple ways to display data, but it does not support BPF filters. Another one is `nethlogs`, which supports BPF filters, but can only view data by process, cannot view data by connections or remote address. sniffer combines the advantages of the two projects with a new Plot mode.
 
+### Connections and Process Matching
+
+On Linux, sniffer refers to the ways where the [ss](https://man7.org/linux/man-pages/man8/ss.8.html) command uses [netlink socket](https://man7.org/linux/man-pages/man7/netlink.7.html) to obtain the connections of the `ESTABLISHED` state, since that approach is way more efficient than reading the `/proc/net/*` files directly. But both need to aggregate and calculate the network traffic of the process by matching the `inode` information under `/proc/${pid}/fd`.
+
+On macOS, the [lsof](https://ss64.com/osx/lsof.html) command is invoked, which relies on capturing the command output to analyze process connections information. And sniffer uses the API provided by [gopsutil](https://github.com/shirou/gopsutil) directly on Windows.
 
 ## Installation
 

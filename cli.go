@@ -38,7 +38,7 @@ func NewApp() *cobra.Command {
 
 	app.Flags().StringVarP(&opt.BPFFilter, "bpf", "b", defaultOpts.BPFFilter, "specify string pcap filter with the BPF syntax")
 	app.Flags().IntVarP(&opt.Interval, "interval", "i", defaultOpts.Interval, "interval for refresh rate in seconds")
-	app.Flags().StringArrayVarP(&opt.DevicesPrefix, "devices-prefix", "d", defaultOpts.DevicesPrefix, "prefixed devices to monitor (default: any devices)")
+	app.Flags().StringArrayVarP(&opt.DevicesPrefix, "devices-prefix", "d", defaultOpts.DevicesPrefix, "prefixed devices to monitor")
 	app.Flags().BoolVarP(&opt.DisableDNSResolve, "no-dns-resolve", "n", defaultOpts.DisableDNSResolve, "disable the DNS resolution")
 	app.Flags().IntSliceVarP(&opt.Pids, "pids", "p", defaultOpts.Pids, "pids to watch in processes mode (default all processes)")
 	app.Flags().IntVarP(&mode, "mode", "m", int(defaultOpts.ViewMode), "view mode of sniffer (0: bytes 1: packets 2: processes)")

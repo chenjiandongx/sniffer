@@ -63,7 +63,7 @@ Examples:
 
 Flags:
   -b, --bpf string                   specify string pcap filter with the BPF syntax (default "tcp or udp")
-  -d, --devices-prefix stringArray   prefixed devices to monitor (default: any devices)
+  -d, --devices-prefix stringArray   prefixed devices to monitor (default [en,lo,eth,em,bond])
   -h, --help                         help for sniffer
   -i, --interval int                 interval for refresh rate in seconds (default 1)
   -m, --mode int                     view mode of sniffer (0: bytes 1: packets 2: processes)

@@ -114,21 +114,15 @@ func (c *PcapClient) getAvailableDevices() error {
 	}
 
 	for _, device := range all {
-		if device.Name == "any" {
-			continue
+		var found bool
+		for _, prefix := range c.devicesPrefix {
+			if strings.HasPrefix(device.Name, prefix) {
+				found = true
+				break
+			}
 		}
-
-		if len(c.devicesPrefix) > 0 {
-			var found bool
-			for _, prefix := range c.devicesPrefix {
-				if strings.HasPrefix(device.Name, prefix) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
+		if !found {
+			continue
 		}
 
 		handler, err := c.getHandler(device.Name, c.bpfFilter)

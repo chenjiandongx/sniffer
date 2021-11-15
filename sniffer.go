@@ -54,6 +54,7 @@ func DefaultOptions() Options {
 		Interval:          1,
 		ViewMode:          ModeTableBytes,
 		Unit:              UnitKB,
+		DevicesPrefix:     []string{"en", "lo", "eth", "em", "bond"},
 		DisableDNSResolve: false,
 	}
 }

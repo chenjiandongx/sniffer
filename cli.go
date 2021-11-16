@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const version = "v0.1.1"
+
 func NewApp() *cobra.Command {
 	defaultOpts := DefaultOptions()
 
@@ -17,7 +19,7 @@ func NewApp() *cobra.Command {
 	app := &cobra.Command{
 		Use:     "sniffer",
 		Short:   "# A modern alternative network traffic sniffer.",
-		Version: "v0.1.0",
+		Version: version,
 		Run: func(cmd *cobra.Command, args []string) {
 			if list {
 				devices, err := ListAllDevices()

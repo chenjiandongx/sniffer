@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chenjiandongx/termui/v3"
+	"github.com/chenjiandongx/termui/v3/widgets"
 	"github.com/dustin/go-humanize"
 	"github.com/gammazero/deque"
-	"github.com/gizak/termui/v3"
-	"github.com/gizak/termui/v3/widgets"
 )
 
 const (

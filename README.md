@@ -1,10 +1,12 @@
 # sniffer
 
-> 🐶 *A modern alternative network traffic sniffer inspired by [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and [nethogs](https://github.com/raboof/nethogs)(C++).*
+> *A modern alternative network traffic sniffer inspired by [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and [nethogs](https://github.com/raboof/nethogs)(C++).*
 
 https://user-images.githubusercontent.com/19553554/141692419-da8b63e1-e936-4d14-8ff5-5893e20a1f27.mov
 
 ## Introduction
+
+[中文介绍](https://chenjiandongx.me/2021/11/17/sniffer-network-traffic/)
 
 sniffer is designed for network troubleshooting. It can be started at any time to analyze the processes or connections causing increases in network traffic without loading any kernel modules. In addition, the GUI of it is responsive that can fit with terminals of all sizes automatically.
 
@@ -14,11 +16,11 @@ sniffer manipulates [gopacket](https://github.com/google/gopacket) to sniff the 
 
 On Linux, sniffer refers to the ways in which the [ss](https://man7.org/linux/man-pages/man8/ss.8.html) tool used, obtaining the connections of the `ESTABLISHED` state by [netlink socket](https://man7.org/linux/man-pages/man7/netlink.7.html). Since that approach is more efficient than reading the `/proc/net/*` files directly. But both need to aggregate and calculate the network traffic of the process by matching the `inode` information under `/proc/${pid}/fd`.
 
-On macOS, the [lsof](https://ss64.com/osx/lsof.html) command is invoked, which relies on capturing the command output for analyzing process connections information. And sniffer uses the API provided by [gopsutil](https://github.com/shirou/gopsutil) directly on Windows.
+On macOS, the [lsof](https://ss64.com/osx/lsof.html) command is invoked, which relies on capturing the command output for analyzing process connections information. And sniffer manipulates the API provided by [gopsutil](https://github.com/shirou/gopsutil) directly on Windows.
 
 ## Installation
 
-***sniffer*** manipulates the `libpcap` library to capture user-level packets hence you need to have it installed first.
+***sniffer*** relies on the `libpcap` library to capture user-level packets hence you need to have it installed first.
 
 **Debian/Ubuntu**
 ```shell

@@ -85,6 +85,14 @@ func NewSniffer(opts Options) (*Sniffer, error) {
 	}, nil
 }
 
+func (s *Sniffer) SwitchViewMode() {
+	s.opts.ViewMode = (s.opts.ViewMode + 1) % 3
+	s.statsManager = NewStatsManager(s.opts)
+
+	s.ui.Close()
+	s.ui = NewUIComponent(s.opts)
+}
+
 func (s *Sniffer) Start() {
 	events := termui.PollEvents()
 	s.Refresh()
@@ -102,6 +110,8 @@ func (s *Sniffer) Start() {
 			case "<Resize>":
 				payload := e.Payload.(termui.Resize)
 				s.ui.viewer.Resize(payload.Width, payload.Height)
+			case "s", "S":
+				s.SwitchViewMode()
 			case "q", "Q", "<C-c>":
 				return
 			}
@@ -115,9 +125,9 @@ func (s *Sniffer) Start() {
 }
 
 func (s *Sniffer) Close() {
+	s.ui.Close()
 	s.pcapClient.Close()
 	s.dnsResolver.Close()
-	s.ui.Close()
 }
 
 func (s *Sniffer) Refresh() {

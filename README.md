@@ -76,6 +76,15 @@ Flags:
   -v, --version                      version for sniffer
 ```
 
+**Shortcuts**
+
+| Keys | Description |
+| ---- | ----------- |
+| <kbd>Space</kbd> | pause refreshing |
+| <kbd>Tab</kbd> | rearrange tables |
+| <kbd>s</kbd> | switch next view mode |
+| <kbd>q</kbd> / <kbd>Ctrl</kbd>+<kbd>C</kbd> | quit |
+
 ## View Mode
 
 ***Bytes Mode:*** display traffic stats in bytes by the Table widget.

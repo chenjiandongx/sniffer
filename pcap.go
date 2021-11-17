@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"sync"
@@ -137,6 +138,10 @@ func (c *PcapClient) getAvailableDevices() error {
 		for _, addr := range device.Addresses {
 			c.bindIPs[addr.IP.String()] = true
 		}
+	}
+
+	if len(c.handlers) == 0 {
+		return errors.New("no available devices found")
 	}
 
 	return nil

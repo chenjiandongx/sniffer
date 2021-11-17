@@ -91,16 +91,6 @@ func (lc *lsofConn) getOpenSockets(pids ...int32) (OpenSockets, error) {
 			if err != nil {
 				continue
 			}
-
-			if len(pids) > 0 {
-				pid, err := strconv.Atoi(fields[1])
-				if err != nil {
-					continue
-				}
-				if !set[int32(pid)] {
-					continue
-				}
-			}
 			sockets[LocalSocket{IP: ipport[0], Port: uint16(port), Protocol: ProtoTCP}] = procName
 
 		case "UDP":

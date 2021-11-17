@@ -44,7 +44,7 @@ Windows need to have [npcap](https://nmap.org/npcap/) installed for capturing pa
 After that, install sniffer by `go install` or you could download the [release binary](https://github.com/chenjiandongx/sniffer/releases)
 
 ```shell
-go install github.com/chenjiandongx/sniffer@latest
+go get github.com/chenjiandongx/sniffer@latest
 ```
 
 ## Usages

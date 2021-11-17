@@ -2,7 +2,7 @@
 
 > *A modern alternative network traffic sniffer inspired by [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and [nethogs](https://github.com/raboof/nethogs)(C++).*
 
-https://user-images.githubusercontent.com/19553554/141692419-da8b63e1-e936-4d14-8ff5-5893e20a1f27.mov
+https://user-images.githubusercontent.com/19553554/142255776-4f01f06f-af79-4fb1-820f-7a00c71416d3.mov
 
 ## Introduction
 
@@ -80,7 +80,7 @@ Flags:
   -v, --version                      version for sniffer
 ```
 
-**Shortcuts**
+**Hotkeys**
 
 | Keys | Description |
 | ---- | ----------- |
@@ -93,15 +93,15 @@ Flags:
 
 ***Bytes Mode:*** display traffic stats in bytes by the Table widget.
 
-![](https://user-images.githubusercontent.com/19553554/141689557-75e9959f-62db-45d8-85e2-1d8f9e8a0cfb.jpg)
+![](https://user-images.githubusercontent.com/19553554/142255986-4e3dddec-daaf-4d22-be08-e4e7b630ebbe.jpg)
 
 ***Packets Mode:*** display traffic stats in packets by the Table widget.
 
-![](https://user-images.githubusercontent.com/19553554/141689559-ee93b3f2-9fc2-424a-aa42-78ae9bc94e12.jpg)
+![](https://user-images.githubusercontent.com/19553554/142256017-9ebe2845-8284-482a-9f43-4e983fa32d15.jpg)
 
 ***Processes Mode:*** display traffic stats groups by process using Plot widget.
 
-![](https://user-images.githubusercontent.com/19553554/141689569-eca76a82-219b-4e21-8d06-bbddea7bad40.jpg)
+![](https://user-images.githubusercontent.com/19553554/142256080-1ae6ccc8-d053-41ce-9293-cff239672ef9.jpg)
 
 ## License
 

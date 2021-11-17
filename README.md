@@ -44,7 +44,7 @@ Windows need to have [npcap](https://nmap.org/npcap/) installed for capturing pa
 after that, install sniffer
 
 ```shell
-go get github.com/chenjiandongx/sinffer
+go get github.com/chenjiandongx/sniffer
 ```
 
 ## Usages

@@ -39,15 +39,7 @@ func (i LsofInvoker) Exec() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (lc *lsofConn) GetProcSockets(pids ...int32) (OpenSockets, error) {
-	return lc.getOpenSockets(pids...)
-}
-
-func (lc *lsofConn) GetOpenSockets() (OpenSockets, error) {
-	return lc.getOpenSockets()
-}
-
-func (lc *lsofConn) getOpenSockets(pids ...int32) (OpenSockets, error) {
+func (lc *lsofConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
 	sockets := make(OpenSockets)
 	output, err := lc.invoker.Exec()
 	if err != nil {

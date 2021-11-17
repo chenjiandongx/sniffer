@@ -12,11 +12,7 @@ import (
 
 type psutilConn struct{}
 
-func (ps *psutilConn) GetOpenSockets() (OpenSockets, error) {
-	return ps.getOpenSockets()
-}
-
-func (ps *psutilConn) GetProcSockets(pids ...int32) (OpenSockets, error) {
+func (ps *psutilConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
 	return ps.getOpenSockets(pids...)
 }
 

@@ -32,8 +32,7 @@ type OpenSockets map[LocalSocket]string
 type Utilization map[Connection]*ConnectionInfo
 
 type SocketFetcher interface {
-	GetOpenSockets() (OpenSockets, error)
-	GetProcSockets(pid ...int32) (OpenSockets, error)
+	GetOpenSockets(pid ...int32) (OpenSockets, error)
 }
 
 type Protocol string

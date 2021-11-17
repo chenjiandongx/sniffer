@@ -56,10 +56,11 @@ func NewApp() *cobra.Command {
 	app.Flags().IntVarP(&opt.Interval, "interval", "i", defaultOpts.Interval, "interval for refresh rate in seconds")
 	app.Flags().StringArrayVarP(&opt.DevicesPrefix, "devices-prefix", "d", defaultOpts.DevicesPrefix, "prefixed devices to monitor")
 	app.Flags().BoolVarP(&opt.DisableDNSResolve, "no-dns-resolve", "n", defaultOpts.DisableDNSResolve, "disable the DNS resolution")
-	app.Flags().IntSliceVarP(&opt.Pids, "pids", "p", defaultOpts.Pids, "pids to watch in processes mode (default all processes)")
+	app.Flags().Int32SliceVarP(&opt.Pids, "pids", "p", defaultOpts.Pids, "pids to watch, empty stands for all pids")
 	app.Flags().IntVarP(&mode, "mode", "m", int(defaultOpts.ViewMode), "view mode of sniffer (0: bytes 1: packets 2: processes)")
 	app.Flags().StringVarP(&unit, "unit", "u", defaultOpts.Unit.String(), "unit of traffic stats in processes mode, optional: B, KB, MB, GB")
 
+	app.Flags().PrintDefaults()
 	return app
 }
 

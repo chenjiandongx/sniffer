@@ -199,7 +199,7 @@ type PlotViewer struct {
 	shiftIdx int
 	count    int
 	unit     Unit
-	pids     []int
+	pids     []int32
 }
 
 func (pv *PlotViewer) Setup() {

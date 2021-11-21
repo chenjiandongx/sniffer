@@ -287,18 +287,12 @@ func (pv *PlotViewer) Shift() {
 	pv.shiftIdx++
 	width, height := termui.TerminalDimensions()
 	pv.grid = pv.newGrid(width, height)
-	if pv.count <= 1 {
-		return
-	}
-	termui.Render(pv.grid)
+	pv.render()
 }
 
 func (pv *PlotViewer) Resize(width, height int) {
 	pv.grid = pv.newGrid(width, height)
-	if pv.count <= 1 {
-		return
-	}
-	termui.Render(pv.grid)
+	pv.render()
 }
 
 func (pv *PlotViewer) Render(stats interface{}) {
@@ -313,6 +307,10 @@ func (pv *PlotViewer) Render(stats interface{}) {
 	pv.updatePackets(data)
 	pv.updateBytes(data)
 	pv.updateConnections(data)
+	pv.render()
+}
+
+func (pv *PlotViewer) render() {
 	if pv.count <= 1 {
 		return
 	}

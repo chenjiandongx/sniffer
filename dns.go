@@ -50,6 +50,7 @@ func (c *DNSResolver) Close() {
 	c.wg.Wait()
 }
 
+// Lookup resolve remote ip to the domains.
 func (c *DNSResolver) Lookup(ip string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -60,6 +61,10 @@ func (c *DNSResolver) Lookup(ip string) string {
 
 	if len(addrs) == 0 {
 		return ip
+	}
+
+	if len(addrs) == 1 {
+		return addrs[0]
 	}
 
 	sort.Strings(addrs)

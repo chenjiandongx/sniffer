@@ -1,5 +1,9 @@
 # sniffer
 
+[![GoDoc](https://godoc.org/github.com/chenjiandongx/sniffer?status.svg)](https://godoc.org/github.com/chenjiandongx/sniffer)
+[![Go Report Card](https://goreportcard.com/badge/github.com/chenjiandongx/sniffer)](https://goreportcard.com/report/github.com/chenjiandongx/sniffer)
+[![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
+
 > *A modern alternative network traffic sniffer inspired by [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and [nethogs](https://github.com/raboof/nethogs)(C++).*
 
 https://user-images.githubusercontent.com/19553554/141692419-da8b63e1-e936-4d14-8ff5-5893e20a1f27.mov

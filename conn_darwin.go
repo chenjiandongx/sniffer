@@ -13,12 +13,13 @@ import (
 )
 
 type lsofConn struct {
-	invoker LsofInvoker
+	invoker lsofInvoker
 }
 
-type LsofInvoker struct{}
+type lsofInvoker struct{}
 
-func (i LsofInvoker) Exec() ([]byte, error) {
+// Exec executes the command and return the output bytes of it.
+func (i lsofInvoker) Exec() ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 

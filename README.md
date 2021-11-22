@@ -80,7 +80,7 @@ Flags:
   -m, --mode int                     view mode of sniffer (0: bytes 1: packets 2: processes)
   -n, --no-dns-resolve               disable the DNS resolution
   -p, --pids int32Slice              pids to watch, empty stands for all pids (default [])
-  -u, --unit string                  unit of traffic stats in processes mode, optional: B, KB, MB, GB (default "KB")
+  -u, --unit string                  unit of traffic stats, optional: B, Kb, KB, Mb, MB, Gb, GB (default "KB")
   -v, --version                      version for sniffer
 ```
 

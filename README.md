@@ -97,15 +97,15 @@ Flags:
 
 ***Bytes Mode:*** display traffic stats in bytes by the Table widget.
 
-![](https://user-images.githubusercontent.com/19553554/142255986-4e3dddec-daaf-4d22-be08-e4e7b630ebbe.jpg)
+![](https://user-images.githubusercontent.com/19553554/142900814-5a0d5e01-43b8-4980-85fa-e78f4a554bc6.jpg)
 
 ***Packets Mode:*** display traffic stats in packets by the Table widget.
 
-![](https://user-images.githubusercontent.com/19553554/142256017-9ebe2845-8284-482a-9f43-4e983fa32d15.jpg)
+![](https://user-images.githubusercontent.com/19553554/142900831-d7a025ad-4275-4c5f-a904-f66e329bffe7.jpg)
 
 ***Processes Mode:*** display traffic stats groups by process using Plot widget.
 
-![](https://user-images.githubusercontent.com/19553554/142256080-1ae6ccc8-d053-41ce-9293-cff239672ef9.jpg)
+![](https://user-images.githubusercontent.com/19553554/142900845-50657ee0-7df6-4cca-99e8-c0fe05487b08.jpg)
 
 ## License
 

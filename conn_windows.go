@@ -28,16 +28,21 @@ func (ps *psutilConn) getOpenSockets(pids ...int32) (OpenSockets, error) {
 	return openSockets, nil
 }
 
-func (ps *psutilConn) getProcName(pid int32) string {
+func (ps *psutilConn) getProcName(pid int32) ProcessInfo {
+	procInfo := ProcessInfo{Name: unknownProcessName}
+
 	proc, err := process.NewProcess(pid)
 	if err != nil {
-		return unknownProcessName
+		return procInfo
 	}
 	exe, err := proc.Exe()
 	if err != nil {
-		return unknownProcessName
+		return procInfo
 	}
-	return filepath.Base(exe)
+
+	procInfo.Pid = int(pid)
+	procInfo.Name = filepath.Base(exe)
+	return procInfo
 }
 
 func (ps *psutilConn) getConnections(proto Protocol, openSockets OpenSockets, pids ...int32) error {

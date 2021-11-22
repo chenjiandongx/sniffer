@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,7 +29,16 @@ type Connection struct {
 	Remote RemoteSocket
 }
 
-type OpenSockets map[LocalSocket]string
+type ProcessInfo struct {
+	Pid  int
+	Name string
+}
+
+func (p ProcessInfo) String() string {
+	return fmt.Sprintf("<%d>:%s", p.Pid, p.Name)
+}
+
+type OpenSockets map[LocalSocket]ProcessInfo
 type Utilization map[Connection]*ConnectionInfo
 
 type SocketFetcher interface {

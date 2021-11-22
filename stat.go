@@ -176,7 +176,7 @@ func (s *StatsManager) getProcName(openSockets OpenSockets, localSocket LocalSoc
 
 		v, ok := openSockets[cloned]
 		if ok {
-			return v
+			return v.String()
 		}
 	}
 	return unknownProcessName

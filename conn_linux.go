@@ -215,8 +215,8 @@ func (nl *netlinkConn) sockdiagSend(proto, family uint8, states uint32) (skfd in
 	return skfd, nil
 }
 
-func (nl *netlinkConn) sockdiagRecv(skfd, proto int, inodeMap map[uint32]string) (map[LocalSocket]string, error) {
-	sockets := make(map[LocalSocket]string)
+func (nl *netlinkConn) sockdiagRecv(skfd, proto int, inodeMap map[uint32]string) (OpenSockets, error) {
+	sockets := make(OpenSockets)
 	buffer := make([]byte, os.Getpagesize())
 loop:
 	for {
@@ -242,6 +242,11 @@ loop:
 			m := (*inetDiagMsg)(unsafe.Pointer(&msg.Data[0]))
 			srcIP, _ := nl.ipHex2String(m.IDiagFamily, m.ID.IdiagSrc)
 
+			procInfo := ProcessInfo{
+				Pid:  int(msg.Header.Pid),
+				Name: inodeMap[m.IDiagInode],
+			}
+
 			var p Protocol
 			switch proto {
 			case syscall.IPPROTO_TCP:
@@ -249,15 +254,15 @@ loop:
 			case syscall.IPPROTO_UDP:
 				p = ProtoUDP
 			}
-			sockets[LocalSocket{IP: srcIP, Port: uint16(m.ID.IdiagSport.Int()), Protocol: p}] = inodeMap[m.IDiagInode]
+			sockets[LocalSocket{IP: srcIP, Port: uint16(m.ID.IdiagSport.Int()), Protocol: p}] = procInfo
 		}
 	}
 
 	return sockets, nil
 }
 
-func (nl *netlinkConn) getOpenSockets(inodeMap map[uint32]string) (map[LocalSocket]string, error) {
-	sockets := make(map[LocalSocket]string)
+func (nl *netlinkConn) getOpenSockets(inodeMap map[uint32]string) (OpenSockets, error) {
+	sockets := make(OpenSockets)
 
 	type Req struct {
 		Protocol int

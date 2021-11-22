@@ -31,7 +31,7 @@ type Options struct {
 	// Pids to watch in processes mode
 	Pids []int32
 
-	// Unit of stats in processes mode, optional: B, KB, MB, GB
+	// Unit of stats in processes mode, optional: B, Kb, KB, Mb, MB, Gb, GB
 	Unit Unit
 
 	// DisableDNSResolve decides whether if disable the DNS resolution

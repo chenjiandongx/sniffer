@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "v0.2.0"
+const version = "v0.3.0"
 
 func NewApp() *cobra.Command {
 	defaultOpts := DefaultOptions()
@@ -58,7 +58,7 @@ func NewApp() *cobra.Command {
 	app.Flags().BoolVarP(&opt.DisableDNSResolve, "no-dns-resolve", "n", defaultOpts.DisableDNSResolve, "disable the DNS resolution")
 	app.Flags().Int32SliceVarP(&opt.Pids, "pids", "p", defaultOpts.Pids, "pids to watch, empty stands for all pids")
 	app.Flags().IntVarP(&mode, "mode", "m", int(defaultOpts.ViewMode), "view mode of sniffer (0: bytes 1: packets 2: processes)")
-	app.Flags().StringVarP(&unit, "unit", "u", defaultOpts.Unit.String(), "unit of traffic stats in processes mode, optional: B, KB, MB, GB")
+	app.Flags().StringVarP(&unit, "unit", "u", defaultOpts.Unit.String(), "unit of traffic stats, optional: B, Kb, KB, Mb, MB, Gb, GB")
 
 	app.Flags().PrintDefaults()
 	return app

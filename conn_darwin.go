@@ -58,17 +58,16 @@ func (lc *lsofConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
 		if len(fields) < 10 {
 			continue
 		}
-		procName := strings.ReplaceAll(fields[0], "\\x20", " ")
 
+		procName := strings.ReplaceAll(fields[0], "\\x20", " ")
+		pid, _ := strconv.Atoi(fields[1])
 		if len(pids) > 0 {
-			pid, err := strconv.Atoi(fields[1])
-			if err != nil {
-				continue
-			}
 			if !set[int32(pid)] {
 				continue
 			}
 		}
+
+		procInfo := ProcessInfo{Pid: pid, Name: procName}
 
 		switch fields[8] {
 		case "TCP":
@@ -84,7 +83,7 @@ func (lc *lsofConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
 			if err != nil {
 				continue
 			}
-			sockets[LocalSocket{IP: ipport[0], Port: uint16(port), Protocol: ProtoTCP}] = procName
+			sockets[LocalSocket{IP: ipport[0], Port: uint16(port), Protocol: ProtoTCP}] = procInfo
 
 		case "UDP":
 			ipport := strings.Split(fields[9], ":")
@@ -96,7 +95,7 @@ func (lc *lsofConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
 			if err != nil {
 				continue
 			}
-			sockets[LocalSocket{IP: ipport[0], Port: uint16(port), Protocol: ProtoUDP}] = procName
+			sockets[LocalSocket{IP: ipport[0], Port: uint16(port), Protocol: ProtoUDP}] = procInfo
 		}
 	}
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/chenjiandongx/termui/v3"
@@ -44,13 +43,16 @@ type Unit string
 const (
 	UnitB  Unit = "B"
 	UnitKB Unit = "KB"
+	UnitKb Unit = "Kb"
 	UnitMB Unit = "MB"
+	UnitMb Unit = "Mb"
 	UnitGB Unit = "GB"
+	UnitGb Unit = "Gb"
 )
 
 func (u Unit) Validate() error {
 	switch u {
-	case UnitB, UnitKB, UnitMB, UnitGB:
+	case UnitB, UnitKB, UnitKb, UnitMB, UnitMb, UnitGB, UnitGb:
 		return nil
 	}
 	return fmt.Errorf("invalid unit %s", u)
@@ -67,10 +69,16 @@ func (u Unit) Ratio() float64 {
 		ratio = 1
 	case UnitKB:
 		ratio = 1024
+	case UnitKb:
+		ratio = 1024 / 8
 	case UnitMB:
 		ratio = 1024 * 1024
+	case UnitMb:
+		ratio = 1024 * 1024 / 8
 	case UnitGB:
 		ratio = 1024 * 1024 * 1024
+	case UnitGb:
+		ratio = 1024 * 1024 * 1024 / 8
 	}
 	return ratio
 }
@@ -122,6 +130,7 @@ func NewUIComponent(opt Options) *UIComponent {
 			remoteAddrs: newTable("Remote Address"),
 			connections: newTable("Connections"),
 			mode:        opt.ViewMode,
+			unit:        opt.Unit,
 		}
 	default:
 		ui.viewer = &PlotViewer{
@@ -327,6 +336,7 @@ type TableViewer struct {
 	grid        *termui.Grid
 	shiftIdx    int
 	mode        ViewMode
+	unit        Unit
 }
 
 func (tv *TableViewer) Setup() {
@@ -352,7 +362,7 @@ func (tv *TableViewer) humanizeNum(n int) string {
 	var s string
 	switch tv.mode {
 	case ModeTableBytes:
-		s = strings.ReplaceAll(humanize.IBytes(uint64(n)), " ", "")
+		s = fmt.Sprintf("%.1f%s", float64(n)/tv.unit.Ratio(), tv.unit.String())
 	case ModeTablePackets:
 		s = humanize.Comma(int64(n))
 	}
@@ -387,7 +397,7 @@ func (tv *TableViewer) updateProcesses(snapshot *Snapshot) {
 		rows = append(rows, []string{r.ProcessName, strconv.Itoa(r.Data.ConnCount), up + " / " + down})
 	}
 
-	header := []string{"Process", "Connections", "Up / Down"}
+	header := []string{"<Pid>:Process", "Connections", "Up / Down"}
 	tv.processes.Rows = [][]string{header, make([]string, 3)}
 	tv.processes.Rows = append(tv.processes.Rows, rows...)
 }
@@ -435,7 +445,7 @@ func (tv *TableViewer) updateConnections(snapshot *Snapshot) {
 		rows = append(rows, []string{conn, r.Data.ProcessName, up + " / " + down})
 	}
 
-	header := []string{"Connections", "Process", "Up / Down"}
+	header := []string{"Connections", "<Pid>:Process", "Up / Down"}
 	tv.connections.Rows = [][]string{header, make([]string, 3)}
 	tv.connections.Rows = append(tv.connections.Rows, rows...)
 }

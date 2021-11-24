@@ -45,14 +45,10 @@ brew install libpcap
 
 Windows need to have [npcap](https://nmap.org/npcap/) installed for capturing packets.
 
-After that, install sniffer by `go get` or `go install`
+After that, install sniffer by `go get` command.
 
 ```shell
-# go get
-go get github.com/chenjiandongx/sniffer@latest
-
-# go install
-go install github.com/chenjiandongx/sniffer@latest
+go get -u github.com/chenjiandongx/sniffer
 ```
 
 ## Usages

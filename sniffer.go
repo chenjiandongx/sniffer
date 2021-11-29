@@ -36,6 +36,9 @@ type Options struct {
 
 	// DisableDNSResolve decides whether if disable the DNS resolution
 	DisableDNSResolve bool
+
+	// AllDevices specifies whether to listen all devices or not
+	AllDevices bool
 }
 
 func (o Options) Validate() error {
@@ -56,6 +59,7 @@ func DefaultOptions() Options {
 		Unit:              UnitKB,
 		DevicesPrefix:     []string{"en", "lo", "eth", "em", "bond"},
 		DisableDNSResolve: false,
+		AllDevices:        false,
 	}
 }
 

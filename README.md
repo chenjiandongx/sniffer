@@ -68,6 +68,7 @@ Examples:
   $ sniffer -b tcp -d lo -d eth
 
 Flags:
+  -a, --all-devices                  listen all devices if present
   -b, --bpf string                   specify string pcap filter with the BPF syntax (default "tcp or udp")
   -d, --devices-prefix stringArray   prefixed devices to monitor (default [en,lo,eth,em,bond])
   -h, --help                         help for sniffer

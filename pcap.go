@@ -85,6 +85,7 @@ type PcapClient struct {
 	bpfFilter         string
 	devicesPrefix     []string
 	disableDNSResolve bool
+	allDevices        bool
 	ch                chan []Segment
 	wg                sync.WaitGroup
 	lookup            Lookup
@@ -103,6 +104,7 @@ func NewPcapClient(lookup Lookup, opt Options) (*PcapClient, error) {
 		bpfFilter:         opt.BPFFilter,
 		devicesPrefix:     opt.DevicesPrefix,
 		disableDNSResolve: opt.DisableDNSResolve,
+		allDevices:        opt.AllDevices,
 	}
 
 	if err := client.getAvailableDevices(); err != nil {
@@ -128,15 +130,17 @@ func (c *PcapClient) getAvailableDevices() error {
 	}
 
 	for _, device := range all {
-		var found bool
-		for _, prefix := range c.devicesPrefix {
-			if strings.HasPrefix(device.Name, prefix) {
-				found = true
-				break
+		if !c.allDevices {
+			var found bool
+			for _, prefix := range c.devicesPrefix {
+				if strings.HasPrefix(device.Name, prefix) {
+					found = true
+					break
+				}
 			}
-		}
-		if !found {
-			continue
+			if !found {
+				continue
+			}
 		}
 
 		handler, err := c.getHandler(device.Name, c.bpfFilter)

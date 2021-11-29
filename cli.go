@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "v0.4.0"
+const version = "v0.4.1"
 
 func NewApp() *cobra.Command {
 	defaultOpts := DefaultOptions()
@@ -52,6 +52,7 @@ func NewApp() *cobra.Command {
 	}
 
 	app.Flags().BoolVarP(&list, "list", "l", false, "list all devices name")
+	app.Flags().BoolVarP(&opt.AllDevices, "all-devices", "a", false, "listen all devices if present")
 	app.Flags().StringVarP(&opt.BPFFilter, "bpf", "b", defaultOpts.BPFFilter, "specify string pcap filter with the BPF syntax")
 	app.Flags().IntVarP(&opt.Interval, "interval", "i", defaultOpts.Interval, "interval for refresh rate in seconds")
 	app.Flags().StringArrayVarP(&opt.DevicesPrefix, "devices-prefix", "d", defaultOpts.DevicesPrefix, "prefixed devices to monitor")

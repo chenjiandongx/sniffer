@@ -2,13 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/gizak/termui/v3"
-	_ "net/http/pprof"
 )
 
 func exit(s string) {
@@ -101,9 +98,6 @@ func (s *Sniffer) SwitchViewMode() {
 }
 
 func (s *Sniffer) Start() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 	events := termui.PollEvents()
 	s.Refresh()
 	var paused bool

@@ -2,9 +2,6 @@ package main
 
 import (
 	"sort"
-	"sync"
-
-	"github.com/gammazero/deque"
 )
 
 const (
@@ -143,29 +140,20 @@ func (s *Snapshot) TopNConnections(n int, mode ViewMode) []ConnectionsResult {
 }
 
 type StatsManager struct {
-	mut   sync.Mutex
-	ring  *deque.Deque
 	ratio int
+	stat  Stat
 	mode  ViewMode
 }
 
 func NewStatsManager(opt Options) *StatsManager {
 	return &StatsManager{
-		ring:  deque.New(),
 		ratio: opt.Interval,
 		mode:  opt.ViewMode,
 	}
 }
 
 func (s *StatsManager) Put(stat Stat) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	const maxsize = 3
-	if s.ring.Len() >= maxsize {
-		s.ring.PopFront()
-	}
-	s.ring.PushBack(stat)
+	s.stat = stat
 }
 
 func (s *StatsManager) getProcName(openSockets OpenSockets, localSocket LocalSocket) string {
@@ -183,126 +171,112 @@ func (s *StatsManager) getProcName(openSockets OpenSockets, localSocket LocalSoc
 }
 
 func (s *StatsManager) GetStats() interface{} {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	size := s.ring.Len()
-	if size <= 0 {
-		return nil
-	}
-
 	if s.mode == ModePlotProcesses {
-		return s.getNetworkData(size)
+		return s.getNetworkData()
 	}
-	return s.getSnapshot(size)
+	return s.getSnapshot()
 }
 
-func (s *StatsManager) getNetworkData(size int) *NetworkData {
+func (s *StatsManager) getNetworkData() *NetworkData {
 	visited := map[Connection]bool{}
 	var uploadBytes, downloadBytes, uploadPackets, downloadPackets, connections int
 
-	for i := 0; i < size; i++ {
-		stat := s.ring.At(i).(Stat)
-		for conn, info := range stat.Utilization {
-			procName := s.getProcName(stat.OpenSockets, conn.Local)
-			if procName == unknownProcessName {
-				continue
-			}
-
-			if !visited[conn] {
-				connections++
-				visited[conn] = true
-			}
-
-			uploadBytes += info.UploadBytes
-			downloadBytes += info.DownloadBytes
-			uploadPackets += info.UploadPackets
-			downloadPackets += info.DownloadPackets
+	stat := s.stat
+	for conn, info := range stat.Utilization {
+		procName := s.getProcName(stat.OpenSockets, conn.Local)
+		if procName == unknownProcessName {
+			continue
 		}
+
+		if !visited[conn] {
+			connections++
+			visited[conn] = true
+		}
+
+		uploadBytes += info.UploadBytes
+		downloadBytes += info.DownloadBytes
+		uploadPackets += info.UploadPackets
+		downloadPackets += info.DownloadPackets
 	}
 
-	size = size * s.ratio
 	return &NetworkData{
-		UploadBytes:     uploadBytes / size,
-		DownloadBytes:   downloadBytes / size,
-		UploadPackets:   uploadPackets / size,
-		DownloadPackets: downloadPackets / size,
+		UploadBytes:     uploadBytes / s.ratio,
+		DownloadBytes:   downloadBytes / s.ratio,
+		UploadPackets:   uploadPackets / s.ratio,
+		DownloadPackets: downloadPackets / s.ratio,
 		ConnCount:       connections,
 	}
 }
 
-func (s *StatsManager) getSnapshot(size int) *Snapshot {
+func (s *StatsManager) getSnapshot() *Snapshot {
 	processes := map[string]*NetworkData{}
 	remoteAddr := map[string]*NetworkData{}
 	connections := map[Connection]*ConnectionData{}
 	visited := map[Connection]bool{}
 	var totalUploadBytes, totalDownloadBytes, totalUploadPackets, totalDownloadPackets, totalConnections int
 
-	for i := 0; i < size; i++ {
-		stat := s.ring.At(i).(Stat)
-		for conn, info := range stat.Utilization {
-			procName := s.getProcName(stat.OpenSockets, conn.Local)
-			if _, ok := connections[conn]; !ok {
-				connections[conn] = &ConnectionData{
-					InterfaceName: info.Interface,
-					ProcessName:   procName,
-				}
+	stat := s.stat
+	for conn, info := range stat.Utilization {
+		procName := s.getProcName(stat.OpenSockets, conn.Local)
+		if _, ok := connections[conn]; !ok {
+			connections[conn] = &ConnectionData{
+				InterfaceName: info.Interface,
+				ProcessName:   procName,
 			}
-			connections[conn].UploadBytes += info.UploadBytes
-			connections[conn].DownloadBytes += info.DownloadBytes
-			connections[conn].UploadPackets += info.UploadPackets
-			connections[conn].DownloadPackets += info.DownloadPackets
-
-			if _, ok := remoteAddr[conn.Remote.IP]; !ok {
-				remoteAddr[conn.Remote.IP] = &NetworkData{}
-			}
-			if !visited[conn] {
-				totalConnections++
-				remoteAddr[conn.Remote.IP].ConnCount++
-			}
-			remoteAddr[conn.Remote.IP].UploadBytes += info.UploadBytes
-			remoteAddr[conn.Remote.IP].DownloadBytes += info.UploadBytes
-			remoteAddr[conn.Remote.IP].UploadPackets += info.UploadPackets
-			remoteAddr[conn.Remote.IP].DownloadPackets += info.DownloadPackets
-
-			if _, ok := processes[procName]; !ok {
-				processes[procName] = &NetworkData{}
-			}
-			if !visited[conn] {
-				processes[procName].ConnCount++
-			}
-			processes[procName].UploadBytes += info.UploadBytes
-			processes[procName].DownloadBytes += info.DownloadBytes
-			processes[procName].UploadPackets += info.UploadPackets
-			processes[procName].DownloadPackets += info.DownloadPackets
-
-			totalUploadPackets += info.UploadPackets
-			totalDownloadPackets += info.DownloadPackets
-			totalUploadBytes += info.UploadBytes
-			totalDownloadBytes += info.DownloadBytes
-			visited[conn] = true
 		}
+		connections[conn].UploadBytes += info.UploadBytes
+		connections[conn].DownloadBytes += info.DownloadBytes
+		connections[conn].UploadPackets += info.UploadPackets
+		connections[conn].DownloadPackets += info.DownloadPackets
+
+		if _, ok := remoteAddr[conn.Remote.IP]; !ok {
+			remoteAddr[conn.Remote.IP] = &NetworkData{}
+		}
+		if !visited[conn] {
+			totalConnections++
+			remoteAddr[conn.Remote.IP].ConnCount++
+		}
+		remoteAddr[conn.Remote.IP].UploadBytes += info.UploadBytes
+		remoteAddr[conn.Remote.IP].DownloadBytes += info.UploadBytes
+		remoteAddr[conn.Remote.IP].UploadPackets += info.UploadPackets
+		remoteAddr[conn.Remote.IP].DownloadPackets += info.DownloadPackets
+
+		if _, ok := processes[procName]; !ok {
+			processes[procName] = &NetworkData{}
+		}
+		if !visited[conn] {
+			processes[procName].ConnCount++
+		}
+		processes[procName].UploadBytes += info.UploadBytes
+		processes[procName].DownloadBytes += info.DownloadBytes
+		processes[procName].UploadPackets += info.UploadPackets
+		processes[procName].DownloadPackets += info.DownloadPackets
+
+		totalUploadPackets += info.UploadPackets
+		totalDownloadPackets += info.DownloadPackets
+		totalUploadBytes += info.UploadBytes
+		totalDownloadBytes += info.DownloadBytes
+		visited[conn] = true
 	}
 
-	size = size * s.ratio
 	for _, v := range processes {
-		v.DivideBy(size)
+		v.DivideBy(s.ratio)
 	}
 	for _, v := range remoteAddr {
-		v.DivideBy(size)
+		v.DivideBy(s.ratio)
 	}
 	for _, v := range connections {
-		v.DivideBy(size)
+		v.DivideBy(s.ratio)
 	}
 
 	return &Snapshot{
 		Processes:            processes,
 		RemoteAddrs:          remoteAddr,
 		Connections:          connections,
-		TotalUploadBytes:     totalUploadBytes / size,
-		TotalDownloadBytes:   totalDownloadBytes / size,
-		TotalUploadPackets:   totalUploadPackets / size,
-		TotalDownloadPackets: totalDownloadPackets / size,
+		TotalUploadBytes:     totalUploadBytes,
+		TotalDownloadBytes:   totalDownloadBytes,
+		TotalUploadPackets:   totalUploadPackets,
+		TotalDownloadPackets: totalDownloadPackets,
 		TotalConnections:     totalConnections,
 	}
 }

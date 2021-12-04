@@ -28,17 +28,17 @@ On macOS, the [lsof](https://ss64.com/osx/lsof.html) command is invoked, which r
 
 **Debian/Ubuntu**
 ```shell
-sudo apt-get install libpcap-dev
+$ sudo apt-get install libpcap-dev
 ```
 
 **CentOS/Fedora**
 ```shell
-sudo yum install libpcap libpcap-devel
+$ sudo yum install libpcap libpcap-devel
 ```
 
 **MacOS**
 ```shell
-brew install libpcap
+$ brew install libpcap
 ```
 
 **Windows**
@@ -48,7 +48,7 @@ Windows need to have [npcap](https://nmap.org/npcap/) installed for capturing pa
 After that, install sniffer by `go get` command.
 
 ```shell
-go get -u github.com/chenjiandongx/sniffer
+$ go get -u github.com/chenjiandongx/sniffer
 ```
 
 ## Usages
@@ -89,6 +89,38 @@ Flags:
 | <kbd>Tab</kbd> | rearrange tables |
 | <kbd>s</kbd> | switch next view mode |
 | <kbd>q</kbd> / <kbd>Ctrl</kbd>+<kbd>C</kbd> | quit |
+
+## Performance
+
+[iperf](https://github.com/esnet/iperf) is a tool for active measurements of the maximum achievable bandwidth on IP networks. Next we use this tool to forge massive packets on the `lo` device.
+
+```shell
+$ iperf -s -p 5001
+$ iperf -c localhost --parallel 40 -i 1 -t 2000
+```
+
+***sniffer vs bandwhich vs nethogs***
+
+As you can see, CPU overheads `bandwhich > sniffer > nethogs`, memory overheads `sniffer > nethogs > bandwhich`.
+```shell
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+ 128405 root      20   0  210168   5184   3596 S  31.0   0.3   1:21.69 bandwhich
+ 128596 root      20   0 1449872  21912   8512 S  20.7   1.1   0:28.54 sniffer
+ 128415 root      20   0   18936   7464   6900 S   5.7   0.4   0:11.56 nethogs
+```
+
+See what stats they show, sniffer and bandwhich output are very approximate(~ 2.5GB/s). netlogs can only handles packets 1.122GB/s. May this be the reason for its low CPU consumption?
+
+```shell
+# sniffer
+Total </ Connections: 80 Up: 2.5GBps Down: 0.0GBps />
+
+# bandwhich
+Total Up / Down: 2.5GiBps / 964Bps
+
+# nethogs
+TOTAL    1.122       0.000 GB/sec
+```
 
 ## View Mode
 

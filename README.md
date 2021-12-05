@@ -109,7 +109,7 @@ As you can see, CPU overheads `bandwhich > sniffer > nethogs`, memory overheads 
  128415 root      20   0   18936   7464   6900 S   5.7   0.4   0:11.56 nethogs
 ```
 
-See what stats they show, sniffer and bandwhich output are very approximate(~ 2.5GB/s). netlogs can only handles packets 1.122GB/s. May this be the reason for its low CPU consumption?
+See what stats they show, sniffer and bandwhich output are very approximate(~ 2.5GB/s). netlogs can only handles packets 1.122GB/s.
 
 ```shell
 # sniffer

@@ -13,7 +13,11 @@ import (
 )
 
 type lsofConn struct {
-	invoker lsofInvoker
+	invoker Invoker
+}
+
+type Invoker interface {
+	Exec() ([]byte, error)
 }
 
 type lsofInvoker struct{}
@@ -103,5 +107,5 @@ func (lc *lsofConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
 }
 
 func GetSocketFetcher() SocketFetcher {
-	return &lsofConn{}
+	return &lsofConn{invoker: lsofInvoker{}}
 }

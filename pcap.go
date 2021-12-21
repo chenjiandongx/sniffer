@@ -34,8 +34,10 @@ func (p ProcessInfo) String() string {
 	return fmt.Sprintf("<%d>:%s", p.Pid, p.Name)
 }
 
-type OpenSockets map[LocalSocket]ProcessInfo
-type Utilization map[Connection]*ConnectionInfo
+type (
+	OpenSockets map[LocalSocket]ProcessInfo
+	Utilization map[Connection]*ConnectionInfo
+)
 
 type SocketFetcher interface {
 	GetOpenSockets(pid ...int32) (OpenSockets, error)

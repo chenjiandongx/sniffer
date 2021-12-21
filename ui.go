@@ -84,7 +84,7 @@ func (u Unit) Ratio() float64 {
 }
 
 func newFooter() *widgets.Paragraph {
-	return newParagraph("Press <Space> to pause, <q>/<Ctrl+C> to exit, <s> to switch mode. Use <Tab> to rearrange tables")
+	return newParagraph("<space> Pause. <q>/<ctrl+c> Exit. <s> Switch mode. <tab> Rearrange tables")
 }
 
 func newParagraph(text string) *widgets.Paragraph {
@@ -351,9 +351,9 @@ func (tv *TableViewer) getHeaderText(conn int, up, down string) string {
 	var text string
 	switch tv.mode {
 	case ModeTableBytes:
-		text = fmt.Sprintf("[Bytes Mode] Now: %s  Total </ Connections: %d Up: %s Down: %s />", now, conn, up, down)
+		text = fmt.Sprintf("[Bytes Mode] Time: %s  [Total] Conn:%d Up:%s Down:%s", now, conn, up, down)
 	case ModeTablePackets:
-		text = fmt.Sprintf("[Packets Mode] Now: %s  Total </ Connections: %d Up: %s Down: %s />", now, conn, up, down)
+		text = fmt.Sprintf("[Packets Mode] Time: %s  [Total] Conn:%d Up:%s Down:%s", now, conn, up, down)
 	}
 	return text
 }

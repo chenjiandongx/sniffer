@@ -106,7 +106,7 @@ func (c *PcapClient) parsePacket(device string, packet gopacket.Packet) *Segment
 		return nil
 	}
 
-	var direction = DirectionDownload
+	direction := DirectionDownload
 	srcIP := ipv4pkg.SrcIP.String()
 	dstIP := ipv4pkg.DstIP.String()
 	if c.bindIPs[srcIP] {

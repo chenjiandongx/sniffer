@@ -112,8 +112,8 @@ func (c *PcapClient) parsePacket(ph *pcapHandler, decoded []gopacket.Layer) *Seg
 	var srcPort, dstPort uint16
 	var srcIP, dstIP string
 	var protocol Protocol
-	var direction = DirectionDownload
 	var dataLen int
+	direction := DirectionDownload
 
 	for _, layerType := range decoded {
 		switch lyr := layerType.(type) {

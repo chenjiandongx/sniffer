@@ -84,7 +84,7 @@ func (u Unit) Ratio() float64 {
 }
 
 func newFooter() *widgets.Paragraph {
-	return newParagraph("<space> Pause. <q>/<ctrl+c> Exit. <s> Switch mode. <tab> Rearrange tables")
+	return newParagraph("<space> Pause. <q> Exit. <s> Switch mode. <tab> Rearrange tables")
 }
 
 func newParagraph(text string) *widgets.Paragraph {

@@ -6,7 +6,7 @@
 
 > *A modern alternative network traffic sniffer inspired by [bandwhich](https://github.com/imsnif/bandwhich)(Rust) and [nethogs](https://github.com/raboof/nethogs)(C++).*
 
-https://user-images.githubusercontent.com/19553554/142890205-62980e37-5861-4161-9669-737317573aa1.mov
+https://user-images.githubusercontent.com/19553554/147360587-a3cfee18-7eb6-464b-9173-9afe6ee86cdf.mov
 
 ## Introduction
 
@@ -26,6 +26,8 @@ On macOS, the [lsof](https://ss64.com/osx/lsof.html) command is invoked, which r
 
 ***sniffer*** relies on the `libpcap` library to capture user-level packets hence you need to have it installed first.
 
+### Linux / Windows
+
 **Debian/Ubuntu**
 ```shell
 $ sudo apt-get install libpcap-dev
@@ -36,11 +38,6 @@ $ sudo apt-get install libpcap-dev
 $ sudo yum install libpcap libpcap-devel
 ```
 
-**MacOS**
-```shell
-$ brew install libpcap
-```
-
 **Windows**
 
 Windows need to have [npcap](https://nmap.org/npcap/) installed for capturing packets.
@@ -49,6 +46,12 @@ After that, install sniffer by `go get` command.
 
 ```shell
 $ go get -u github.com/chenjiandongx/sniffer
+```
+
+### MacOS
+
+```shell
+$ brew install sniffer
 ```
 
 ## Usages
@@ -88,7 +91,7 @@ Flags:
 | <kbd>Space</kbd> | pause refreshing |
 | <kbd>Tab</kbd> | rearrange tables |
 | <kbd>s</kbd> | switch next view mode |
-| <kbd>q</kbd> / <kbd>Ctrl</kbd>+<kbd>C</kbd> | quit |
+| <kbd>q</kbd> | quit |
 
 ## Performance
 
@@ -111,30 +114,23 @@ As you can see, CPU overheads `bandwhich > sniffer > nethogs`, memory overheads 
 
 See what stats they show, sniffer and bandwhich output are very approximate(~ 2.5GB/s). netlogs can only handles packets 1.122GB/s.
 
-```shell
-# sniffer
-Total </ Connections: 80 Up: 2.5GBps Down: 0.0GBps />
-
-# bandwhich
-Total Up / Down: 2.5GiBps / 964Bps
-
-# nethogs
-TOTAL    1.122       0.000 GB/sec
-```
+|  | sniffer | bandwhich | nethogs |
+| -- | ------- | --------- | ------- |
+| **Upload** | 2.5GiBps | 2.5GiBps | 1.12GiBps |
 
 ## View Mode
 
 ***Bytes Mode:*** display traffic stats in bytes by the Table widget.
 
-![](https://user-images.githubusercontent.com/19553554/142900814-5a0d5e01-43b8-4980-85fa-e78f4a554bc6.jpg)
+![](https://user-images.githubusercontent.com/19553554/147360714-98709e52-1f73-4882-ba56-30f572be9b7e.jpg)
 
 ***Packets Mode:*** display traffic stats in packets by the Table widget.
 
-![](https://user-images.githubusercontent.com/19553554/142900831-d7a025ad-4275-4c5f-a904-f66e329bffe7.jpg)
+![](https://user-images.githubusercontent.com/19553554/147360686-5600d65b-9685-486b-b7cf-42c341364009.jpg)
 
 ***Processes Mode:*** display traffic stats groups by process using Plot widget.
 
-![](https://user-images.githubusercontent.com/19553554/142900845-50657ee0-7df6-4cca-99e8-c0fe05487b08.jpg)
+![](https://user-images.githubusercontent.com/19553554/147360725-c9541fdd-3203-4ead-8f29-042478717abb.jpg)
 
 ## License
 

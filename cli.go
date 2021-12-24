@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "v0.5.1"
+const version = "v0.5.2"
 
 func NewApp() *cobra.Command {
 	defaultOpts := DefaultOptions()

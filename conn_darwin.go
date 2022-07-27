@@ -44,16 +44,11 @@ func (i lsofInvoker) Exec() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (lc *lsofConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
+func (lc *lsofConn) GetOpenSockets() (OpenSockets, error) {
 	sockets := make(OpenSockets)
 	output, err := lc.invoker.Exec()
 	if err != nil {
 		return sockets, err
-	}
-
-	set := make(map[int32]bool)
-	for _, pid := range pids {
-		set[pid] = true
 	}
 
 	lines := strings.Split(string(output), "\n")
@@ -65,12 +60,6 @@ func (lc *lsofConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
 
 		procName := strings.ReplaceAll(fields[0], "\\x20", " ")
 		pid, _ := strconv.Atoi(fields[1])
-		if len(pids) > 0 {
-			if !set[int32(pid)] {
-				continue
-			}
-		}
-
 		procInfo := ProcessInfo{Pid: pid, Name: procName}
 
 		switch fields[8] {

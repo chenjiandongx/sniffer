@@ -64,8 +64,8 @@ Usage:
   sniffer [flags]
 
 Examples:
-  # processes mode for pid 1024,2048 in MB unit
-  $ sniffer -p 1024 -p 2048 -m 2 -u MB
+  # bytes mode in MB unit
+  $ sniffer -u MB
 
   # only capture the TCP protocol packets with lo,eth prefixed devices
   $ sniffer -b tcp -d lo -d eth
@@ -77,9 +77,8 @@ Flags:
   -h, --help                         help for sniffer
   -i, --interval int                 interval for refresh rate in seconds (default 1)
   -l, --list                         list all devices name
-  -m, --mode int                     view mode of sniffer (0: bytes 1: packets 2: processes)
+  -m, --mode int                     view mode of sniffer (0: bytes 1: packets 2: plot)
   -n, --no-dns-resolve               disable the DNS resolution
-  -p, --pids int32Slice              pids to watch, empty stands for all pids (default [])
   -u, --unit string                  unit of traffic stats, optional: B, Kb, KB, Mb, MB, Gb, GB (default "KB")
   -v, --version                      version for sniffer
 ```
@@ -127,10 +126,6 @@ See what stats they show, sniffer and bandwhich output are very approximate(~ 2.
 ***Packets Mode:*** display traffic stats in packets by the Table widget.
 
 ![](https://user-images.githubusercontent.com/19553554/147360686-5600d65b-9685-486b-b7cf-42c341364009.jpg)
-
-***Processes Mode:*** display traffic stats groups by process using Plot widget.
-
-![](https://user-images.githubusercontent.com/19553554/147360725-c9541fdd-3203-4ead-8f29-042478717abb.jpg)
 
 ## License
 

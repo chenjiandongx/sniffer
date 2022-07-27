@@ -12,16 +12,12 @@ import (
 
 type psutilConn struct{}
 
-func (ps *psutilConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
-	return ps.getOpenSockets(pids...)
-}
-
-func (ps *psutilConn) getOpenSockets(pids ...int32) (OpenSockets, error) {
+func (ps *psutilConn) GetOpenSockets() (OpenSockets, error) {
 	openSockets := make(OpenSockets)
-	if err := ps.getConnections(ProtoTCP, openSockets, pids...); err != nil {
+	if err := ps.getConnections(ProtoTCP, openSockets); err != nil {
 		return nil, err
 	}
-	if err := ps.getConnections(ProtoUDP, openSockets, pids...); err != nil {
+	if err := ps.getConnections(ProtoUDP, openSockets); err != nil {
 		return nil, err
 	}
 
@@ -45,23 +41,14 @@ func (ps *psutilConn) getProcName(pid int32) ProcessInfo {
 	return procInfo
 }
 
-func (ps *psutilConn) getConnections(proto Protocol, openSockets OpenSockets, pids ...int32) error {
+func (ps *psutilConn) getConnections(proto Protocol, openSockets OpenSockets) error {
 	connections, err := net.Connections(string(proto))
 	if err != nil {
 		return err
 	}
 
-	set := make(map[int32]bool)
-	for _, pid := range pids {
-		set[pid] = true
-	}
-
 	for _, conn := range connections {
 		if proto == ProtoTCP && conn.Status != "ESTABLISHED" {
-			continue
-		}
-
-		if len(pids) > 0 && !set[conn.Pid] {
 			continue
 		}
 

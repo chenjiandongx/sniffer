@@ -381,13 +381,10 @@ func (nl *netlinkConn) listPids() ([]int32, error) {
 	return pids, nil
 }
 
-func (nl *netlinkConn) GetOpenSockets(pids ...int32) (OpenSockets, error) {
-	var err error
-	if len(pids) == 0 {
-		pids, err = nl.listPids()
-		if err != nil {
-			return nil, err
-		}
+func (nl *netlinkConn) GetOpenSockets() (OpenSockets, error) {
+	pids, err := nl.listPids()
+	if err != nil {
+		return nil, err
 	}
 
 	inodeMap := nl.getAllProcsInodes(pids...)

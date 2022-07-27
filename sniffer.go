@@ -28,9 +28,6 @@ type Options struct {
 	// DevicesPrefix represents prefixed devices to monitor
 	DevicesPrefix []string
 
-	// Pids to watch in processes mode
-	Pids []int32
-
 	// Unit of stats in processes mode, optional: B, Kb, KB, Mb, MB, Gb, GB
 	Unit Unit
 
@@ -136,7 +133,7 @@ func (s *Sniffer) Close() {
 
 func (s *Sniffer) Refresh() {
 	utilization := s.pcapClient.sinker.GetUtilization()
-	openSockets, err := s.socketFetcher.GetOpenSockets(s.opts.Pids...)
+	openSockets, err := s.socketFetcher.GetOpenSockets()
 	if err != nil {
 		return
 	}

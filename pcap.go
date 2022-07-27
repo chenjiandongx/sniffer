@@ -40,7 +40,7 @@ type (
 )
 
 type SocketFetcher interface {
-	GetOpenSockets(pid ...int32) (OpenSockets, error)
+	GetOpenSockets() (OpenSockets, error)
 }
 
 type Protocol string

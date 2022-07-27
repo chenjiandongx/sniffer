@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
 	"time"
@@ -138,7 +137,6 @@ func NewUIComponent(opt Options) *UIComponent {
 			packetsPlot: newPlot("Packets: Blue Up / Green Down", 2),
 			bytesPlot:   newPlot(fmt.Sprintf("Bytes: <Unit %sps> Blue Up / Green Down", opt.Unit.String()), 2),
 			connsPlot:   newPlot("Connections", 1),
-			pids:        opt.Pids,
 			unit:        opt.Unit,
 		}
 	}
@@ -208,7 +206,6 @@ type PlotViewer struct {
 	shiftIdx int
 	count    int
 	unit     Unit
-	pids     []int32
 }
 
 func (pv *PlotViewer) Setup() {
@@ -232,18 +229,7 @@ func (pv *PlotViewer) newQueue(size int) *queue {
 }
 
 func (pv *PlotViewer) getHeaderText() string {
-	now := time.Now().Format(timeFormat)
-	if len(pv.pids) <= 0 {
-		return fmt.Sprintf("[Processes Mode] Now: %s  Pids All", now)
-	}
-	buf := &bytes.Buffer{}
-	for i, pid := range pv.pids {
-		buf.WriteString(strconv.Itoa(int(pid)))
-		if i+1 != len(pv.pids) {
-			buf.WriteString(" ")
-		}
-	}
-	return fmt.Sprintf("[Processes Mode] Now: %s  Pids </ %s />", now, buf.String())
+	return fmt.Sprintf("[Plot Mode] Now: %s", time.Now().Format(timeFormat))
 }
 
 func (pv *PlotViewer) updatePackets(data *NetworkData) {

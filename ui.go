@@ -149,6 +149,7 @@ func NewUIComponent(opt Options) *UIComponent {
 }
 
 func (ui *UIComponent) Close() {
+	termui.Clear()
 	termui.Close()
 }
 

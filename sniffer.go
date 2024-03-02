@@ -9,7 +9,7 @@ import (
 )
 
 func exit(s string) {
-	fmt.Println("Start sniffer failed:", s)
+	fmt.Fprintln(os.Stderr, "Start sniffer failed:", s)
 	os.Exit(1)
 }
 
@@ -51,7 +51,7 @@ func (o Options) Validate() error {
 func DefaultOptions() Options {
 	return Options{
 		BPFFilter:         "tcp or udp",
-		Interval:          1,
+		Interval:          2,
 		ViewMode:          ModeTableBytes,
 		Unit:              UnitKB,
 		DevicesPrefix:     []string{"en", "lo", "eth", "em", "bond"},
@@ -99,7 +99,9 @@ func (s *Sniffer) Start() {
 	s.Refresh()
 	var paused bool
 
-	ticker := time.Tick(time.Duration(s.opts.Interval) * time.Second)
+	ticker := time.NewTicker(time.Duration(s.opts.Interval) * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case e := <-events:
@@ -117,7 +119,7 @@ func (s *Sniffer) Start() {
 				return
 			}
 
-		case <-ticker:
+		case <-ticker.C:
 			if !paused {
 				s.Refresh()
 			}

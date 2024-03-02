@@ -5,8 +5,9 @@ package main
 
 import (
 	"context"
-	"errors"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/afpacket"
@@ -66,12 +67,12 @@ func (c *PcapClient) getAvailableDevices() error {
 	for _, device := range devs {
 		handler, err := c.getHandler(device.Name)
 		if err != nil {
-			continue
+			return errors.Wrapf(err, "get device(%s) name failed", device.Name)
 		}
 
 		if c.bpfFilter != "" {
 			if err = c.setBPFFilter(handler, c.bpfFilter); err != nil {
-				continue
+				return errors.Wrapf(err, "set bpf-filter(%s) failed", c.bpfFilter)
 			}
 		}
 
@@ -133,14 +134,14 @@ func (c *PcapClient) parsePacket(ph *pcapHandler, decoded []gopacket.Layer) *Seg
 
 		case *layers.TCP:
 			protocol = ProtoTCP
-			srcPort = parsePort(lyr.SrcPort.String())
-			dstPort = parsePort(lyr.DstPort.String())
+			srcPort = uint16(lyr.SrcPort)
+			dstPort = uint16(lyr.DstPort)
 			dataLen = len(lyr.Contents) + len(lyr.Payload)
 
 		case *layers.UDP:
 			protocol = ProtoUDP
-			srcPort = parsePort(lyr.SrcPort.String())
-			dstPort = parsePort(lyr.DstPort.String())
+			srcPort = uint16(lyr.SrcPort)
+			dstPort = uint16(lyr.DstPort)
 			dataLen = len(lyr.Contents) + len(lyr.Payload)
 		}
 	}
@@ -195,6 +196,10 @@ func (c *PcapClient) listen(ph *pcapHandler) {
 		case <-c.ctx.Done():
 			return
 
+			// decode packets followed by layers
+			// 1) Ethernet Layer
+			// 2) IP Layer
+			// 3) TCP/UDP Layer
 		default:
 			decoded = decoded[:0]
 			payload = payload[:0]
@@ -208,7 +213,9 @@ func (c *PcapClient) listen(ph *pcapHandler) {
 				continue
 			}
 
-			if ether.EthernetType != layers.EthernetTypeIPv4 {
+			switch ether.EthernetType {
+			case layers.EthernetTypeIPv4, layers.EthernetTypeIPv6:
+			default:
 				continue
 			}
 
@@ -223,15 +230,14 @@ func (c *PcapClient) listen(ph *pcapHandler) {
 				}
 			}
 
-			if len(decoded) == 0 {
+			if len(decoded) == 0 || len(payload) == 0 {
 				continue
 			}
 
 			var tcpPkg layers.TCP
 			if err = tcpPkg.DecodeFromBytes(payload, gopacket.NilDecodeFeedback); err == nil {
 				decoded = append(decoded, &tcpPkg)
-				seg := c.parsePacket(ph, decoded)
-				if seg != nil {
+				if seg := c.parsePacket(ph, decoded); seg != nil {
 					c.sinker.Fetch(*seg)
 				}
 				continue
@@ -240,8 +246,7 @@ func (c *PcapClient) listen(ph *pcapHandler) {
 			var udpPkg layers.UDP
 			if err = udpPkg.DecodeFromBytes(payload, gopacket.NilDecodeFeedback); err == nil {
 				decoded = append(decoded, &udpPkg)
-				seg := c.parsePacket(ph, decoded)
-				if seg != nil {
+				if seg := c.parsePacket(ph, decoded); seg != nil {
 					c.sinker.Fetch(*seg)
 				}
 			}

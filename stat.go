@@ -273,10 +273,10 @@ func (s *StatsManager) getSnapshot() *Snapshot {
 		Processes:            processes,
 		RemoteAddrs:          remoteAddr,
 		Connections:          connections,
-		TotalUploadBytes:     totalUploadBytes,
-		TotalDownloadBytes:   totalDownloadBytes,
-		TotalUploadPackets:   totalUploadPackets,
-		TotalDownloadPackets: totalDownloadPackets,
+		TotalUploadBytes:     totalUploadBytes / s.ratio,
+		TotalDownloadBytes:   totalDownloadBytes / s.ratio,
+		TotalUploadPackets:   totalUploadPackets / s.ratio,
+		TotalDownloadPackets: totalDownloadPackets / s.ratio,
 		TotalConnections:     totalConnections,
 	}
 }

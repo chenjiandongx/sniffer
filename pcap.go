@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -137,15 +136,4 @@ func listPrefixDevices(prefix []string, allowAll bool) ([]pcap.Interface, error)
 	}
 
 	return devs, nil
-}
-
-func parsePort(s string) uint16 {
-	idx := strings.Index(s, "(")
-	if idx == -1 {
-		i, _ := strconv.Atoi(s)
-		return uint16(i)
-	}
-
-	i, _ := strconv.Atoi(s[:idx])
-	return uint16(i)
 }

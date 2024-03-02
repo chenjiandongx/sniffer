@@ -120,8 +120,8 @@ func (c *PcapClient) parsePacket(device string, packet gopacket.Packet) *Segment
 	tcpLayer := packet.Layer(layers.LayerTypeTCP)
 	tcpPkg, ok := tcpLayer.(*layers.TCP)
 	if ok {
-		srcPort = parsePort(tcpPkg.SrcPort.String())
-		dstPort = parsePort(tcpPkg.DstPort.String())
+		srcPort = uint16(tcpPkg.SrcPort)
+		dstPort = uint16(tcpPkg.DstPort)
 		protocol = ProtoTCP
 		dataLen = len(tcpPkg.Contents) + len(tcpPkg.Payload)
 	}
@@ -130,8 +130,8 @@ func (c *PcapClient) parsePacket(device string, packet gopacket.Packet) *Segment
 		udpLayer := packet.Layer(layers.LayerTypeUDP)
 		udpPkg, ok := udpLayer.(*layers.UDP)
 		if ok {
-			srcPort = parsePort(udpPkg.SrcPort.String())
-			dstPort = parsePort(udpPkg.DstPort.String())
+			srcPort = uint16(udpPkg.SrcPort)
+			dstPort = uint16(udpPkg.DstPort)
 			protocol = ProtoUDP
 			dataLen = len(udpPkg.Contents) + len(udpPkg.Payload)
 		}
